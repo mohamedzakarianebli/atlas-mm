@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ATLAS Minutes Studio</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html, body, #root { height: 100%; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-type="module" data-presets="react">
+import React, { useState, useEffect, useRef, useCallback } from "https://esm.sh/react@18.3.1";
+import ReactDOM from "https://esm.sh/react-dom@18.3.1/client";
+import {
+  LayoutDashboard, FileText, Users, Settings as SettingsIcon,
+  Plus, Trash2, Search, Copy, Play, Square, Sparkles, Download,
+  FileDown, CheckCircle2, Circle, X, ChevronRight, Upload, Clock,
+  CalendarDays, MapPin, UserCheck, AlertCircle, Wand2, Loader2,
+  Lock, LogOut, Folder,
+} from "https://esm.sh/lucide-react@0.263.1?external=react";
+
+/* ---------------------------------------------------------------------
+   ATLAS Minutes Studio
+   A single-file, zero-setup meeting minutes application for the
+   ATLAS Future Leaders executive board and departments.
+   All data persists via window.storage (personal to this browser).
+--------------------------------------------------------------------- */
+
+const DEFAULT_LOGO = "data:image/png;base64,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";
+
+// NOTE: shortened placeholder logo below; replace at will in Settings > Club Branding.
+
+const DEPARTMENTS = [
+  "Executive Board",
+  "Marketing",
+  "Human Resources",
+  "Project Management",
+  "External Relations",
+  "Club",
+];
+
+const EXEC_POSITIONS = [
+  "President", "Vice President", "Treasurer", "General Secretary",
+  "Marketing VP", "Project Management VP", "External Relationships VP",
+  "Human Resources VP",
+];
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+const fmtDateDMY = (iso) => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}-${m}-${y}`;
+};
+
+const fmtTime = (d) =>
+  d ? new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+
+function emptyMeeting() {
+  return {
+    id: uid(),
+    status: "draft",
+    department: "Executive Board",
+    purpose: "",
+    date: todayISO(),
+    startTime: "",
+    endTime: "",
+    startTimestamp: null,
+    endTimestamp: null,
+    location: "",
+    facilitator: "",
+    presentIds: [],
+    absentIds: [],
+    justifiedIds: [],
+    tasks: [],
+    agenda: [""],
+    announcements: "",
+    discussion: "",
+    decisions: "",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+}
+
+/* ---------------------------- storage helpers ---------------------------- */
+
+async function loadJSON(key, fallback) {
+  try {
+    const raw = window.localStorage.getItem("atlas-minutes:" + key);
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (e) {
+    return fallback;
+  }
+}
+async function saveJSON(key, value) {
+  try {
+    window.localStorage.setItem("atlas-minutes:" + key, JSON.stringify(value));
+  } catch (e) {
+    console.error("storage save failed", key, e);
+  }
+}
+
+/* ---------------------------- AI helper ----------------------------
+   The "Improve Writing" feature calls the Anthropic API, which requires
+   a paid API key when this app runs outside Claude.ai. It's disabled
+   here by default. To re-enable it, put your own Anthropic API key on
+   a small server-side proxy (never expose a key in client-side code)
+   and point this function at that proxy instead. -------------------- */
+
+const AI_ENABLED = false;
+
+async function callClaude(prompt, system) {
+  if (!AI_ENABLED) {
+    throw new Error("AI polish is disabled in this deployment.");
+  }
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  const data = await res.json();
+  const text = (data.content || [])
+    .filter((b) => b.type === "text")
+    .map((b) => b.text)
+    .join("\n");
+  return text.trim();
+}
+
+/* =========================================================================
+   ROOT APP
+========================================================================= */
+
+export default function App() {
+  const [page, setPage] = useState("dashboard");
+  const [members, setMembers] = useState([]);
+  const [meetings, setMeetings] = useState([]);
+  const [settings, setSettings] = useState({ logo: null, clubName: "ATLAS Future Leaders", chapter: "TBS Chapter", boardPin: "" });
+  const [activeMeetingId, setActiveMeetingId] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const [m, mt, s] = await Promise.all([
+        loadJSON("members", []),
+        loadJSON("meetings", []),
+        loadJSON("settings", { logo: null, clubName: "ATLAS Future Leaders", chapter: "TBS Chapter", boardPin: "" }),
+      ]);
+      setMembers(m);
+      setMeetings(mt);
+      setSettings(s);
+      setLoaded(true);
+    })();
+  }, []);
+
+  useEffect(() => { if (loaded) saveJSON("members", members); }, [members, loaded]);
+  useEffect(() => { if (loaded) saveJSON("meetings", meetings); }, [meetings, loaded]);
+  useEffect(() => { if (loaded) saveJSON("settings", settings); }, [settings, loaded]);
+
+  function showToast(msg) {
+    setToast(msg);
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast(null), 2400);
+  }
+
+  function upsertMeeting(next) {
+    next.updatedAt = Date.now();
+    setMeetings((prev) => {
+      const idx = prev.findIndex((m) => m.id === next.id);
+      if (idx === -1) return [next, ...prev];
+      const copy = [...prev];
+      copy[idx] = next;
+      return copy;
+    });
+  }
+
+  function startNewMeeting() {
+    const m = emptyMeeting();
+    upsertMeeting(m);
+    setActiveMeetingId(m.id);
+    setPage("editor");
+  }
+
+  const logoSrc = settings.logo || DEFAULT_LOGO;
+
+  if (!loaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-800" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-stone-50 text-stone-900 flex">
+      <style>{PRINT_CSS}</style>
+      <Sidebar page={page} setPage={setPage} logoSrc={logoSrc} clubName={settings.clubName} chapter={settings.chapter} />
+
+      <main className="flex-1 min-w-0">
+        {page === "dashboard" && (
+          <Dashboard
+            meetings={meetings}
+            members={members}
+            onNew={startNewMeeting}
+            onOpen={(id) => { setActiveMeetingId(id); setPage("editor"); }}
+          />
+        )}
+
+        {page === "editor" && (
+          <MeetingEditor
+            meeting={meetings.find((m) => m.id === activeMeetingId) || null}
+            members={members}
+            settings={settings}
+            logoSrc={logoSrc}
+            onChange={upsertMeeting}
+            onBack={() => setPage("dashboard")}
+            onFinalize={(m) => { upsertMeeting({ ...m, status: "final" }); showToast("Meeting minutes finalized."); }}
+            toast={showToast}
+          />
+        )}
+
+        {page === "folders" && (
+          <FoldersPage meetings={meetings} members={members} settings={settings} logoSrc={logoSrc} />
+        )}
+
+        {page === "members" && (
+          <MembersGate settings={settings} members={members} setMembers={setMembers} />
+        )}
+
+        {page === "settings" && (
+          <SettingsGate settings={settings} setSettings={setSettings} defaultLogo={DEFAULT_LOGO} />
+        )}
+      </main>
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 bg-emerald-900 text-stone-50 px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2 no-print">
+          <CheckCircle2 className="w-4 h-4" /> {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =========================================================================
+   SIDEBAR
+========================================================================= */
+
+function Sidebar({ page, setPage, logoSrc, clubName, chapter }) {
+  const items = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "editor", label: "New Meeting", icon: FileText },
+    { id: "folders", label: "Folders (PIN)", icon: Lock },
+    { id: "members", label: "Members", icon: Users },
+    { id: "settings", label: "Settings", icon: SettingsIcon },
+  ];
+  return (
+    <aside className="w-64 shrink-0 bg-emerald-950 text-stone-100 flex flex-col no-print">
+      <div className="p-5 border-b border-emerald-900 flex items-center gap-3">
+        <img src={logoSrc} alt="Club seal" className="w-11 h-11 rounded-full object-contain bg-white p-0.5" />
+        <div className="min-w-0">
+          <div className="font-serif text-base leading-tight truncate">{clubName}</div>
+          <div className="text-xs text-emerald-400 truncate">{chapter}</div>
+        </div>
+      </div>
+      <nav className="flex-1 p-3 space-y-1">
+        {items.map((it) => {
+          const Icon = it.icon;
+          const active = page === it.id;
+          return (
+            <button
+              key={it.id}
+              onClick={() => setPage(it.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                active ? "bg-emerald-800 text-white" : "text-emerald-200 hover:bg-emerald-900"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {it.label}
+            </button>
+          );
+        })}
+      </nav>
+      <div className="p-4 text-[11px] text-emerald-500 border-t border-emerald-900">
+        Minutes Studio &middot; runs entirely in your browser
+      </div>
+    </aside>
+  );
+}
+
+/* =========================================================================
+   DASHBOARD
+========================================================================= */
+
+function Dashboard({ meetings, members, onNew, onOpen }) {
+  const total = meetings.length;
+  const drafts = meetings.filter((m) => m.status === "draft").length;
+  const recent = [...meetings].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
+
+  return (
+    <div className="p-8 max-w-5xl mx-auto">
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="font-serif text-3xl text-emerald-950">Dashboard</h1>
+          <p className="text-stone-500 mt-1 text-sm">A quick look at your club's meeting activity.</p>
+        </div>
+        <button onClick={onNew} className="flex items-center gap-2 bg-emerald-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-800">
+          <Plus className="w-4 h-4" /> Quick Create Meeting
+        </button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-8">
+        <StatCard label="Total Meetings" value={total} icon={FileText} />
+        <StatCard label="Drafts in Progress" value={drafts} icon={Clock} />
+        <StatCard label="Club Members" value={members.length} icon={Users} />
+      </div>
+
+      <div className="bg-white rounded-xl border border-stone-200 p-5 max-w-2xl">
+        <h2 className="font-serif text-lg text-emerald-950 mb-3">Recent Meetings</h2>
+        {recent.length === 0 && <EmptyHint text="No meetings yet. Create your first one above." />}
+        <div className="space-y-2">
+          {recent.map((m) => (
+            <button key={m.id} onClick={() => onOpen(m.id)} className="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-stone-50 border border-stone-100">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{m.purpose || "Untitled meeting"}</div>
+                <div className="text-xs text-stone-500">{m.department} &middot; {fmtDateDMY(m.date)}</div>
+              </div>
+              <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full ${m.status === "final" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                {m.status}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon: Icon }) {
+  return (
+    <div className="bg-white rounded-xl border border-stone-200 p-5 flex items-center gap-4">
+      <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+        <Icon className="w-5 h-5 text-emerald-800" />
+      </div>
+      <div>
+        <div className="text-2xl font-serif text-emerald-950">{value}</div>
+        <div className="text-xs text-stone-500">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyHint({ text }) {
+  return <div className="text-sm text-stone-400 py-6 text-center">{text}</div>;
+}
+
+/* =========================================================================
+   PRINT CSS
+========================================================================= */
+
+const PRINT_CSS = `
+.input {
+  width: 100%;
+  border: 1px solid #d6d3d1;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.875rem;
+  background: white;
+  outline: none;
+}
+.input:focus { border-color: #065f46; box-shadow: 0 0 0 2px rgba(6,95,70,0.12); }
+select.input { cursor: pointer; }
+
+.preview-wrap {
+  padding: 2rem 0;
+  display: flex;
+  justify-content: center;
+  background: #f5f5f4;
+  min-height: 100vh;
+}
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .preview-wrap { background: white !important; padding: 0 !important; min-height: 0 !important; }
+  .print-sheet { box-shadow: none !important; margin: 0 !important; }
+  @page { margin: 20mm 15mm; }
+}
+`;
+
+/* =========================================================================
+   MEETING EDITOR
+========================================================================= */
+
+function MeetingEditor({ meeting, members, settings, logoSrc, onChange, onBack, onFinalize, toast }) {
+  const [local, setLocal] = useState(meeting || emptyMeeting());
+  const [tab, setTab] = useState("form");
+  const [aiBusy, setAiBusy] = useState(null);
+  const saveTimer = useRef(null);
+
+  useEffect(() => { if (meeting) setLocal(meeting); }, [meeting && meeting.id]);
+
+  useEffect(() => {
+    if (!local) return;
+    window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => onChange(local), 700);
+    return () => window.clearTimeout(saveTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [local]);
+
+  if (!local) {
+    return (
+      <div className="p-8">
+        <EmptyHint text="Choose a meeting from the dashboard, or start a new one." />
+      </div>
+    );
+  }
+
+  function set(patch) { setLocal((p) => ({ ...p, ...patch })); }
+
+  // Single source of truth: setting a member's status clears the other two lists first.
+  function setAttendanceStatus(id, status) {
+    const current = local.presentIds.includes(id) ? "present" : local.absentIds.includes(id) ? "absent" : local.justifiedIds.includes(id) ? "justified" : null;
+    const present = local.presentIds.filter((x) => x !== id);
+    const absent = local.absentIds.filter((x) => x !== id);
+    const justified = local.justifiedIds.filter((x) => x !== id);
+    if (current === status) {
+      // clicking the already-selected status again clears it (back to "unmarked")
+      set({ presentIds: present, absentIds: absent, justifiedIds: justified });
+      return;
+    }
+    if (status === "present") present.push(id);
+    if (status === "absent") absent.push(id);
+    if (status === "justified") justified.push(id);
+    set({ presentIds: present, absentIds: absent, justifiedIds: justified });
+  }
+
+  const pool = members.filter((m) =>
+    local.department === "Executive Board"
+      ? EXEC_POSITIONS.includes(m.position)
+      : (m.department === local.department || EXEC_POSITIONS.includes(m.position))
+  );
+
+  function addTask() { set({ tasks: [...local.tasks, { id: uid(), task: "", assignedTo: "", deadline: "" }] }); }
+  function updateTask(id, patch) { set({ tasks: local.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) }); }
+  function removeTask(id) { set({ tasks: local.tasks.filter((t) => t.id !== id) }); }
+
+  function addAgenda() { set({ agenda: [...local.agenda, ""] }); }
+  function updateAgenda(i, val) { const a = [...local.agenda]; a[i] = val; set({ agenda: a }); }
+  function removeAgenda(i) { set({ agenda: local.agenda.filter((_, idx) => idx !== i) }); }
+
+  function startMeetingNow() {
+    const now = Date.now();
+    set({ startTimestamp: now, startTime: fmtTime(now) });
+  }
+  function endMeetingNow() {
+    const now = Date.now();
+    set({ endTimestamp: now, endTime: fmtTime(now) });
+  }
+
+  async function improveField(field) {
+    if (!local[field] || !local[field].trim()) return;
+    setAiBusy(field);
+    try {
+      const out = await callClaude(
+        local[field],
+        "You proofread and lightly polish meeting-minutes text. Correct grammar and spelling, make the tone clear and professional, and keep it concise. Never invent facts, names, numbers or information that is not already present. Return only the corrected text with no preamble."
+      );
+      if (out) set({ [field]: out });
+    } catch (e) {
+      toast("AI request failed. Check your connection and try again.");
+    } finally {
+      setAiBusy(null);
+    }
+  }
+
+  const fileName = `${local.department} Meeting Minutes ${fmtDateDMY(local.date)}`.trim();
+
+  // --- PDF / Print -----------------------------------------------------
+  // window.print() on the embedded page can be blocked or behave oddly
+  // inside a sandboxed preview. Opening the printable HTML in its own
+  // browser tab and calling print() there is far more reliable and is
+  // exactly what "Save as PDF" needs (every browser's print dialog has
+  // a "Save as PDF" destination).
+  function doPrint() {
+    const html = buildPrintableHTML(local, members, logoSrc, settings);
+    const printWin = window.open("", "_blank");
+    if (!printWin) {
+      toast("Your browser blocked the print window. Please allow pop-ups for this page, then try again.");
+      return;
+    }
+    printWin.document.open();
+    printWin.document.write(html);
+    printWin.document.close();
+    // Give the new tab a beat to lay out (logo is embedded as base64,
+    // so there's no network wait, just render time) before printing.
+    setTimeout(() => {
+      try {
+        printWin.focus();
+        printWin.print();
+      } catch (e) {
+        toast("Could not open the print dialog automatically. Use your browser's Print option (Ctrl/Cmd+P) in the new tab, then choose 'Save as PDF'.");
+      }
+    }, 350);
+  }
+
+  function downloadHTML() {
+    const html = buildPrintableHTML(local, members, logoSrc, settings);
+    const blob = new Blob([html], { type: "text/html" });
+    triggerDownload(blob, `${fileName}.html`);
+  }
+  function downloadWord() {
+    const html = buildPrintableHTML(local, members, logoSrc, settings);
+    const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+    triggerDownload(blob, `${fileName}.doc`);
+  }
+
+  return (
+    <div className="min-h-screen">
+      <div className="no-print sticky top-0 z-10 bg-stone-50/95 backdrop-blur border-b border-stone-200 px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onBack} className="text-stone-400 hover:text-stone-700"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+          <div className="min-w-0">
+            <div className="font-serif text-lg text-emerald-950 truncate">{local.purpose || "Untitled meeting"}</div>
+            <div className="text-xs text-stone-500">{fileName}.pdf</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-stone-200 rounded-lg p-1 mr-2">
+            <button onClick={() => setTab("form")} className={`px-3 py-1.5 text-xs rounded-md ${tab === "form" ? "bg-white shadow-sm" : "text-stone-500"}`}>Edit</button>
+            <button onClick={() => setTab("preview")} className={`px-3 py-1.5 text-xs rounded-md ${tab === "preview" ? "bg-white shadow-sm" : "text-stone-500"}`}>Preview</button>
+          </div>
+          <button onClick={downloadHTML} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><FileDown className="w-3.5 h-3.5" /> HTML</button>
+          <button onClick={downloadWord} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><FileDown className="w-3.5 h-3.5" /> Word</button>
+          <button onClick={doPrint} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-900 text-white hover:bg-emerald-800"><Download className="w-3.5 h-3.5" /> Save as PDF</button>
+          <button onClick={() => onFinalize(local)} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-800"><CheckCircle2 className="w-3.5 h-3.5" /> Finalize</button>
+        </div>
+      </div>
+
+      {tab === "form" ? (
+        <div className="max-w-3xl mx-auto p-8 space-y-6 no-print">
+          <Section title="Meeting Information">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Department / Template">
+                <select value={local.department} onChange={(e) => set({ department: e.target.value })} className="input">
+                  {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+                </select>
+              </Field>
+              <Field label="Meeting Purpose">
+                <input value={local.purpose} onChange={(e) => set({ purpose: e.target.value })} placeholder="e.g. Weekly Marketing Sync" className="input" />
+              </Field>
+              <Field label="Date">
+                <input type="date" value={local.date} onChange={(e) => set({ date: e.target.value })} className="input" />
+              </Field>
+              <Field label="Location">
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => set({ location: "Online" })} className={`flex-1 px-3 py-2 rounded-lg text-sm border ${local.location === "Online" ? "bg-emerald-900 text-white border-emerald-900" : "border-stone-300 text-stone-600 hover:bg-stone-50"}`}>Online</button>
+                  <button type="button" onClick={() => set({ location: "In Person" })} className={`flex-1 px-3 py-2 rounded-lg text-sm border ${local.location === "In Person" ? "bg-emerald-900 text-white border-emerald-900" : "border-stone-300 text-stone-600 hover:bg-stone-50"}`}>In Person</button>
+                </div>
+              </Field>
+              <Field label="Start Time">
+                <div className="flex gap-2">
+                  <input value={local.startTime} onChange={(e) => set({ startTime: e.target.value })} placeholder="--:--" className="input" />
+                  <button onClick={startMeetingNow} className="px-3 rounded-lg border border-emerald-700 text-emerald-800 text-xs flex items-center gap-1 shrink-0"><Play className="w-3 h-3" /> Start</button>
+                </div>
+              </Field>
+              <Field label="End Time">
+                <div className="flex gap-2">
+                  <input value={local.endTime} onChange={(e) => set({ endTime: e.target.value })} placeholder="--:--" className="input" />
+                  <button onClick={endMeetingNow} className="px-3 rounded-lg border border-stone-400 text-stone-700 text-xs flex items-center gap-1 shrink-0"><Square className="w-3 h-3" /> End</button>
+                </div>
+              </Field>
+              <Field label="Meeting Facilitator">
+                <select value={local.facilitator} onChange={(e) => set({ facilitator: e.target.value })} className="input">
+                  <option value="">Select facilitator...</option>
+                  {members.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+                </select>
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Attendance" subtitle="Mark every member Present, Absent, or Justified.">
+            {pool.length === 0 ? (
+              <EmptyHint text="No members found for this department yet. Add them on the Members page." />
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {pool.map((m) => {
+                  const present = local.presentIds.includes(m.id);
+                  const absent = local.absentIds.includes(m.id);
+                  const justified = local.justifiedIds.includes(m.id);
+                  return (
+                    <div key={m.id} className={`flex items-center justify-between px-3 py-2 rounded-lg border gap-2 ${present ? "border-emerald-300 bg-emerald-50" : absent ? "border-amber-200 bg-amber-50" : justified ? "border-sky-200 bg-sky-50" : "border-stone-200"}`}>
+                      <span className="text-sm truncate min-w-0">{m.name}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => setAttendanceStatus(m.id, "present")} className={`text-[10px] px-2 py-1 rounded-full ${present ? "bg-emerald-700 text-white" : "bg-stone-100 text-stone-500"}`}>Present</button>
+                        <button onClick={() => setAttendanceStatus(m.id, "absent")} className={`text-[10px] px-2 py-1 rounded-full ${absent ? "bg-amber-600 text-white" : "bg-stone-100 text-stone-500"}`}>Absent</button>
+                        <button onClick={() => setAttendanceStatus(m.id, "justified")} className={`text-[10px] px-2 py-1 rounded-full ${justified ? "bg-sky-600 text-white" : "bg-stone-100 text-stone-500"}`}>Justified</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex gap-4 mt-3 text-xs text-stone-500">
+              <span>{local.presentIds.length} present</span>
+              <span>{local.absentIds.length} absent</span>
+              <span>{local.justifiedIds.length} justified</span>
+            </div>
+          </Section>
+
+          <Section title="Action Items">
+            <div className="space-y-2">
+              {local.tasks.map((t) => (
+                <div key={t.id} className="grid grid-cols-[1fr_1fr_140px_32px] gap-2">
+                  <input value={t.task} onChange={(e) => updateTask(t.id, { task: e.target.value })} placeholder="Task" className="input" />
+                  <select value={t.assignedTo} onChange={(e) => updateTask(t.id, { assignedTo: e.target.value })} className="input">
+                    <option value="">Assign to...</option>
+                    {members.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+                  </select>
+                  <input type="date" value={t.deadline} onChange={(e) => updateTask(t.id, { deadline: e.target.value })} className="input" />
+                  <button onClick={() => removeTask(t.id)} className="text-stone-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
+            <button onClick={addTask} className="mt-2 text-xs flex items-center gap-1 text-emerald-800 font-medium"><Plus className="w-3.5 h-3.5" /> Add Task</button>
+          </Section>
+
+          <Section title="Agenda">
+            <div className="space-y-2">
+              {local.agenda.map((a, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs text-stone-400 w-4">{i + 1}.</span>
+                  <input value={a} onChange={(e) => updateAgenda(i, e.target.value)} placeholder={`Agenda item ${i + 1}`} className="input" />
+                  <button onClick={() => removeAgenda(i)} className="text-stone-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
+            <button onClick={addAgenda} className="mt-2 text-xs flex items-center gap-1 text-emerald-800 font-medium"><Plus className="w-3.5 h-3.5" /> Add Agenda Item</button>
+          </Section>
+
+          <TextSection title="Announcements" value={local.announcements} onChange={(v) => set({ announcements: v })} onImprove={() => improveField("announcements")} busy={aiBusy === "announcements"} />
+          <TextSection title="Discussion" value={local.discussion} onChange={(v) => set({ discussion: v })} onImprove={() => improveField("discussion")} busy={aiBusy === "discussion"} rows={6} />
+          <TextSection title="Decisions Made" value={local.decisions} onChange={(v) => set({ decisions: v })} onImprove={() => improveField("decisions")} busy={aiBusy === "decisions"} />
+        </div>
+      ) : (
+        <div className="preview-wrap">
+          <PrintableSheet meeting={local} members={members} logoSrc={logoSrc} settings={settings} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Section({ title, subtitle, children }) {
+  return (
+    <div className="bg-white rounded-xl border border-stone-200 p-5">
+      <h3 className="font-serif text-base text-emerald-950">{title}</h3>
+      {subtitle && <p className="text-xs text-stone-500 mt-0.5 mb-3">{subtitle}</p>}
+      <div className={subtitle ? "" : "mt-3"}>{children}</div>
+    </div>
+  );
+}
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="text-xs text-stone-500 mb-1 block">{label}</span>
+      {children}
+    </label>
+  );
+}
+function TextSection({ title, value, onChange, onImprove, busy, rows = 4 }) {
+  return (
+    <div className="bg-white rounded-xl border border-stone-200 p-5">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-serif text-base text-emerald-950">{title}</h3>
+        <button onClick={onImprove} disabled={busy || !AI_ENABLED} title={!AI_ENABLED ? "AI polish is turned off in this deployment" : ""} className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100 disabled:opacity-50">
+          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Improve Writing
+        </button>
+      </div>
+      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className="input" />
+    </div>
+  );
+}
+
+/* Printable / PDF sheet, styled to match the official ATLAS template */
+
+function PrintableSheet({ meeting, members, logoSrc, settings }) {
+  const byId = Object.fromEntries(members.map((m) => [m.id, m]));
+  const presentNames = meeting.presentIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+  const absentOnly = meeting.absentIds.filter((id) => !meeting.justifiedIds.includes(id));
+  const absentNames = absentOnly.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+  const justifiedNames = meeting.justifiedIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+  const title = meeting.department === "Executive Board" ? "Executive Board Meeting Minutes" : `${meeting.department} Meeting Minutes`;
+
+  const rows = [
+    ["Meeting Purpose", meeting.purpose],
+    ["Date", fmtDateDMY(meeting.date)],
+    ["Time", [meeting.startTime, meeting.endTime].filter(Boolean).join(" to ")],
+    ["Location", meeting.location],
+    ["Meeting Facilitator", meeting.facilitator],
+    ["Attendees", presentNames],
+    ["Absent", absentNames],
+    ["Justified Absence", justifiedNames],
+  ];
+
+  return (
+    <div className="print-sheet bg-white shadow-lg" style={{ width: "210mm", minHeight: "297mm", padding: "16mm 14mm" }}>
+      <PrintHeader logoSrc={logoSrc} title={title} />
+
+      <table className="w-full border-collapse text-[13px] mb-6">
+        <tbody>
+          {rows.map(([label, val]) => (
+            <tr key={label}>
+              <td className="border border-stone-800 px-2 py-1.5 font-semibold w-1/3 align-top">{label}</td>
+              <td className="border border-stone-800 px-2 py-1.5 align-top">{val || ""}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <table className="w-full border-collapse text-[13px] mb-6">
+        <thead>
+          <tr>
+            <th className="border border-stone-800 px-2 py-1.5 text-left">Task</th>
+            <th className="border border-stone-800 px-2 py-1.5 text-left w-1/4">Assigned To</th>
+            <th className="border border-stone-800 px-2 py-1.5 text-left w-1/5">Deadline</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(meeting.tasks.length ? meeting.tasks : [{ id: "x", task: "", assignedTo: "", deadline: "" }]).map((t) => (
+            <tr key={t.id}>
+              <td className="border border-stone-800 px-2 py-1.5">{t.task}</td>
+              <td className="border border-stone-800 px-2 py-1.5">{t.assignedTo}</td>
+              <td className="border border-stone-800 px-2 py-1.5">{t.deadline ? fmtDateDMY(t.deadline) : ""}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <BoxSection title="Agenda Items">
+        <ol className="list-decimal ml-5 space-y-0.5">
+          {meeting.agenda.filter(Boolean).map((a, i) => <li key={i}>{a}</li>)}
+        </ol>
+      </BoxSection>
+
+      <BoxSection title="Announcements">{meeting.announcements}</BoxSection>
+      <BoxSection title="Discussion (items / knowledge shared)" minH="40mm">{meeting.discussion}</BoxSection>
+      <BoxSection title="Decisions Made (what, why, impacts if possible)">{meeting.decisions}</BoxSection>
+    </div>
+  );
+}
+
+function PrintHeader({ logoSrc, title }) {
+  return (
+    <div className="flex items-center gap-4 mb-6 border-b-2 border-emerald-900 pb-3">
+      <img src={logoSrc} alt="Club seal" className="w-16 h-16 object-contain" />
+      <h1 className="font-serif text-2xl italic underline text-emerald-950">{title}</h1>
+    </div>
+  );
+}
+function BoxSection({ title, children, minH = "18mm" }) {
+  return (
+    <table className="w-full border-collapse text-[13px] mb-6">
+      <thead>
+        <tr><th className="border border-stone-800 px-2 py-1.5 text-left font-semibold">{title}</th></tr>
+      </thead>
+      <tbody>
+        <tr><td className="border border-stone-800 px-2 py-2 align-top whitespace-pre-wrap" style={{ minHeight: minH }}>{children}</td></tr>
+      </tbody>
+    </table>
+  );
+}
+
+function buildPrintableHTML(meeting, members, logoSrc, settings) {
+  const byId = Object.fromEntries(members.map((m) => [m.id, m]));
+  const presentNames = meeting.presentIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+  const absentOnly = meeting.absentIds.filter((id) => !meeting.justifiedIds.includes(id));
+  const absentNames = absentOnly.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+  const justifiedNames = meeting.justifiedIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+  const title = meeting.department === "Executive Board" ? "Executive Board Meeting Minutes" : `${meeting.department} Meeting Minutes`;
+  const rows = [
+    ["Meeting Purpose", meeting.purpose], ["Date", fmtDateDMY(meeting.date)],
+    ["Time", [meeting.startTime, meeting.endTime].filter(Boolean).join(" to ")],
+    ["Location", meeting.location], ["Meeting Facilitator", meeting.facilitator],
+    ["Attendees", presentNames], ["Absent", absentNames], ["Justified Absence", justifiedNames],
+  ];
+  const taskRows = (meeting.tasks.length ? meeting.tasks : [{ task: "", assignedTo: "", deadline: "" }])
+    .map((t) => `<tr><td>${nl2br(t.task)}</td><td>${nl2br(t.assignedTo)}</td><td>${t.deadline ? fmtDateDMY(t.deadline) : ""}</td></tr>`).join("");
+  const agendaLi = meeting.agenda.filter(Boolean).map((a) => `<li>${esc(a)}</li>`).join("") || "<li></li>";
+  return `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="utf-8"><title>${esc(title)}</title>
+  <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
+  <style>
+    body{font-family:Georgia,'Times New Roman',serif;color:#1c1c1c;padding:24px;}
+    table{width:100%;border-collapse:collapse;margin-bottom:22px;font-size:13px;table-layout:fixed;}
+    td,th{border:1px solid #333;padding:7px 9px;text-align:left;vertical-align:top;word-wrap:break-word;}
+    th{background:#f3f4f1;}
+    h1{font-style:italic;text-decoration:underline;color:#0a3d2c;font-size:22px;margin:0;}
+    .head{display:flex;align-items:center;gap:16px;border-bottom:2px solid #0a3d2c;padding-bottom:12px;margin-bottom:24px;}
+    img{width:64px;height:64px;object-fit:contain;}
+    ol{margin:0;padding-left:20px;}
+    @media print { @page { margin: 15mm; } }
+  </style></head><body>
+  <div class="head"><img src="${logoSrc}"/><h1>${esc(title)}</h1></div>
+  <table border="1" cellpadding="6" cellspacing="0"><tbody>${rows.map(([l, v]) => `<tr><td style="font-weight:bold;width:33%">${esc(l)}</td><td>${esc(v || "")}</td></tr>`).join("")}</tbody></table>
+  <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th style="width:50%">Task</th><th style="width:25%">Assigned To</th><th style="width:25%">Deadline</th></tr></thead><tbody>${taskRows}</tbody></table>
+  <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Agenda Items</th></tr></thead><tbody><tr><td><ol>${agendaLi}</ol></td></tr></tbody></table>
+  <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Announcements</th></tr></thead><tbody><tr><td style="min-height:40px">${nl2br(meeting.announcements)}</td></tr></tbody></table>
+  <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Discussion (items / knowledge shared)</th></tr></thead><tbody><tr><td style="min-height:120px">${nl2br(meeting.discussion)}</td></tr></tbody></table>
+  <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Decisions Made (what, why, impacts if possible)</th></tr></thead><tbody><tr><td style="min-height:40px">${nl2br(meeting.decisions)}</td></tr></tbody></table>
+  </body></html>`;
+}
+function esc(s) { return (s || "").toString().replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+function nl2br(s) { return esc(s).replace(/\n/g, "<br/>"); }
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* =========================================================================
+   MEMBERS PAGE
+========================================================================= */
+
+/* =========================================================================
+   MEMBERS GATE (Board PIN required — keeps the roster board-only)
+========================================================================= */
+
+function MembersGate({ settings, members, setMembers }) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+
+  function unlock() {
+    const code = pin.trim();
+    if (!code) { setError("Enter the Board PIN."); return; }
+    if (settings.boardPin && code === settings.boardPin) {
+      setUnlocked(true);
+      setError("");
+      return;
+    }
+    setError("Incorrect PIN. The Members page is board-only.");
+  }
+
+  if (!unlocked) {
+    return (
+      <div className="p-8 max-w-sm mx-auto">
+        <h1 className="font-serif text-3xl text-emerald-950 mb-1">Members</h1>
+        <p className="text-stone-500 text-sm mb-6">This page is restricted to Executive Board members. Enter the Board PIN to continue.</p>
+        <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <Field label="Board PIN">
+            <input
+              className="input text-center tracking-[0.3em] text-lg"
+              value={pin}
+              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && unlock()}
+              placeholder="••••"
+              type="password"
+              inputMode="numeric"
+            />
+          </Field>
+          {error && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
+          <button onClick={unlock} className="mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg">
+            <Lock className="w-4 h-4" /> Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="no-print flex justify-end px-8 pt-6">
+        <button onClick={() => { setUnlocked(false); setPin(""); }} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
+      </div>
+      <MembersPage members={members} setMembers={setMembers} />
+    </div>
+  );
+}
+
+/* =========================================================================
+   MEMBERS PAGE
+========================================================================= */
+
+function MembersPage({ members, setMembers }) {
+  const [draft, setDraft] = useState({ name: "", email: "", department: "Marketing", allocation: "", position: "Member", pin: "" });
+  const [q, setQ] = useState("");
+
+  const isEB = EXEC_POSITIONS.includes(draft.position);
+  const isPM = draft.department === "Project Management";
+
+  function addMember() {
+    if (!draft.name.trim()) return;
+    const record = {
+      id: uid(),
+      name: draft.name,
+      email: draft.email,
+      position: draft.position,
+      department: isEB ? "" : draft.department,
+      allocation: isEB || isPM ? "" : draft.allocation,
+      pin: isEB ? "" : draft.pin.trim(),
+    };
+    setMembers((p) => [...p, record]);
+    setDraft({ name: "", email: "", department: "Marketing", allocation: "", position: "Member", pin: "" });
+  }
+  function removeMember(id) { setMembers((p) => p.filter((m) => m.id !== id)); }
+
+  const filtered = members.filter((m) => (m.name + m.email + (m.department || "")).toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="font-serif text-3xl text-emerald-950 mb-1">Members</h1>
+      <p className="text-stone-500 text-sm mb-6">Your club roster — used for one-click attendance selection.</p>
+
+      <div className="bg-white rounded-xl border border-stone-200 p-5 mb-6">
+        <h3 className="font-serif text-base text-emerald-950 mb-3">Add a member</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <input className="input" placeholder="Full name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+          <input className="input" placeholder="Email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+          <select className="input col-span-2" value={draft.position} onChange={(e) => setDraft({ ...draft, position: e.target.value })}>
+            <optgroup label="Executive Board">
+              {EXEC_POSITIONS.map((p) => <option key={p}>{p}</option>)}
+            </optgroup>
+            <optgroup label="Department Member">
+              <option>Member</option>
+            </optgroup>
+          </select>
+
+          {!isEB && (
+            <select className="input" value={draft.department} onChange={(e) => setDraft({ ...draft, department: e.target.value })}>
+              {DEPARTMENTS.filter((d) => d !== "Executive Board").map((d) => <option key={d}>{d}</option>)}
+            </select>
+          )}
+          {!isEB && !isPM && (
+            <input className="input" placeholder="Allocation department (optional)" value={draft.allocation} onChange={(e) => setDraft({ ...draft, allocation: e.target.value })} />
+          )}
+          {!isEB && (
+            <input
+              className="input"
+              placeholder="4-digit PIN (for department folder access)"
+              value={draft.pin}
+              onChange={(e) => setDraft({ ...draft, pin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+              maxLength={4}
+              inputMode="numeric"
+            />
+          )}
+        </div>
+        {isEB && <p className="text-xs text-stone-400 mt-2">Executive Board members belong to the board itself, so no department, allocation department, or personal PIN is needed — they use the shared Board PIN set in Settings.</p>}
+        {!isEB && isPM && <p className="text-xs text-stone-400 mt-2">Project Management members only have their PM department — no allocation department.</p>}
+        <button onClick={addMember} className="mt-3 flex items-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2 rounded-lg"><Plus className="w-4 h-4" /> Add Member</button>
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <Search className="w-4 h-4 text-stone-400" />
+        <input className="input" placeholder="Search members..." value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
+
+      <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+        {filtered.length === 0 && <EmptyHint text="No members yet." />}
+        {filtered.map((m) => (
+          <div key={m.id} className="flex items-center justify-between px-4 py-3">
+            <div>
+              <div className="text-sm font-medium">{m.name}</div>
+              <div className="text-xs text-stone-500">{m.position}{m.department ? ` · ${m.department}` : ""}{m.allocation ? ` (${m.allocation})` : ""} &middot; {m.email}{m.pin ? ` · PIN ${m.pin}` : ""}</div>
+            </div>
+            <button onClick={() => removeMember(m.id)} className="text-stone-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   FOLDERS (PIN-gated access to meeting minutes)
+   - A regular member's personal PIN opens only their own department's
+     folder plus the Club folder (open to everyone).
+   - The shared Board PIN (set in Settings) opens every folder, including
+     Executive Board.
+   Access resets to locked whenever this page is left, since the unlocked
+   state lives only in this component's local state.
+========================================================================= */
+
+function FoldersPage({ meetings, members, settings, logoSrc }) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [access, setAccess] = useState(null); // { role: "board" } | { role: "member", department, memberName }
+  const [openFolder, setOpenFolder] = useState(null);
+  const [viewingMeeting, setViewingMeeting] = useState(null);
+
+  function unlock() {
+    const code = pin.trim();
+    if (!code) { setError("Enter a PIN."); return; }
+    if (settings.boardPin && code === settings.boardPin) {
+      setAccess({ role: "board" });
+      setError("");
+      return;
+    }
+    const match = members.find((m) => m.pin && m.pin === code);
+    if (match) {
+      setAccess({ role: "member", department: match.department, memberName: match.name });
+      setError("");
+      return;
+    }
+    setError("Incorrect PIN. Check with your department VP or the board.");
+  }
+
+  function lock() {
+    setAccess(null);
+    setPin("");
+    setError("");
+    setOpenFolder(null);
+    setViewingMeeting(null);
+  }
+
+  if (!access) {
+    return (
+      <div className="p-8 max-w-sm mx-auto">
+        <h1 className="font-serif text-3xl text-emerald-950 mb-1">Folders</h1>
+        <p className="text-stone-500 text-sm mb-6">Enter your personal PIN, or the Board PIN, to view meeting minutes.</p>
+        <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <Field label="PIN">
+            <input
+              className="input text-center tracking-[0.3em] text-lg"
+              value={pin}
+              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && unlock()}
+              placeholder="••••"
+              type="password"
+              inputMode="numeric"
+            />
+          </Field>
+          {error && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
+          <button onClick={unlock} className="mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg">
+            <Lock className="w-4 h-4" /> Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const accessibleDepartments =
+    access.role === "board"
+      ? DEPARTMENTS
+      : [access.department, "Club"].filter((d, i, arr) => d && arr.indexOf(d) === i);
+
+  if (viewingMeeting) {
+    return (
+      <div className="min-h-screen">
+        <div className="no-print sticky top-0 z-10 bg-stone-50/95 backdrop-blur border-b border-stone-200 px-8 py-4 flex items-center justify-between">
+          <button onClick={() => setViewingMeeting(null)} className="flex items-center gap-1.5 text-sm text-stone-600 hover:text-stone-900">
+            <ChevronRight className="w-4 h-4 rotate-180" /> Back to folder
+          </button>
+          <button onClick={lock} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
+        </div>
+        <div className="preview-wrap">
+          <PrintableSheet meeting={viewingMeeting} members={members} logoSrc={logoSrc} settings={settings} />
+        </div>
+      </div>
+    );
+  }
+
+  if (openFolder) {
+    const folderMeetings = meetings
+      .filter((m) => m.department === openFolder)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+    return (
+      <div className="p-8 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <button onClick={() => setOpenFolder(null)} className="text-xs text-stone-500 hover:text-stone-800 flex items-center gap-1 mb-2"><ChevronRight className="w-3.5 h-3.5 rotate-180" /> All folders</button>
+            <h1 className="font-serif text-2xl text-emerald-950">{openFolder} Minutes</h1>
+          </div>
+          <button onClick={lock} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
+        </div>
+        <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+          {folderMeetings.length === 0 && <EmptyHint text="No meeting minutes in this folder yet." />}
+          {folderMeetings.map((m) => (
+            <button key={m.id} onClick={() => setViewingMeeting(m)} className="w-full text-left flex items-center justify-between px-4 py-3 hover:bg-stone-50">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{m.purpose || "Untitled meeting"}</div>
+                <div className="text-xs text-stone-500">{fmtDateDMY(m.date)}</div>
+              </div>
+              <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ml-2 ${m.status === "final" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                {m.status}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-8 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="font-serif text-3xl text-emerald-950">Folders</h1>
+        <button onClick={lock} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
+      </div>
+      <p className="text-stone-500 text-sm mb-6">
+        {access.role === "board" ? "Board access — every folder is open to you." : `Signed in as ${access.memberName}.`}
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        {accessibleDepartments.map((d) => {
+          const count = meetings.filter((m) => m.department === d).length;
+          return (
+            <button key={d} onClick={() => setOpenFolder(d)} className="text-left bg-white rounded-xl border border-stone-200 p-4 hover:border-emerald-300">
+              <div className="flex items-center gap-2 text-emerald-900 mb-1"><Folder className="w-4 h-4" /> <span className="font-serif text-base">{d}</span></div>
+              <div className="text-xs text-stone-500">{count} meeting{count === 1 ? "" : "s"}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================================
+   SETTINGS PAGE
+========================================================================= */
+
+/* =========================================================================
+   SETTINGS GATE (Board PIN required — the Board PIN itself lives here,
+   so this page must be at least as locked down as Members/Folders)
+========================================================================= */
+
+function SettingsGate({ settings, setSettings, defaultLogo }) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+
+  // First-time setup: if no Board PIN has ever been set, let the club get
+  // in once to create one. After that, this page always requires it.
+  const bootstrapping = !settings.boardPin;
+
+  function unlock() {
+    const code = pin.trim();
+    if (!code) { setError("Enter the Board PIN."); return; }
+    if (settings.boardPin && code === settings.boardPin) {
+      setUnlocked(true);
+      setError("");
+      return;
+    }
+    setError("Incorrect PIN. Settings is board-only.");
+  }
+
+  if (!bootstrapping && !unlocked) {
+    return (
+      <div className="p-8 max-w-sm mx-auto">
+        <h1 className="font-serif text-3xl text-emerald-950 mb-1">Settings</h1>
+        <p className="text-stone-500 text-sm mb-6">This page is restricted to Executive Board members. Enter the Board PIN to continue.</p>
+        <div className="bg-white rounded-xl border border-stone-200 p-5">
+          <Field label="Board PIN">
+            <input
+              className="input text-center tracking-[0.3em] text-lg"
+              value={pin}
+              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }}
+              onKeyDown={(e) => e.key === "Enter" && unlock()}
+              placeholder="••••"
+              type="password"
+              inputMode="numeric"
+            />
+          </Field>
+          {error && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
+          <button onClick={unlock} className="mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg">
+            <Lock className="w-4 h-4" /> Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {!bootstrapping && (
+        <div className="no-print flex justify-end px-8 pt-6">
+          <button onClick={() => { setUnlocked(false); setPin(""); }} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
+        </div>
+      )}
+      <SettingsPage settings={settings} setSettings={setSettings} defaultLogo={defaultLogo} />
+    </div>
+  );
+}
+
+/* =========================================================================
+   SETTINGS PAGE
+========================================================================= */
+
+function SettingsPage({ settings, setSettings, defaultLogo }) {
+  const fileRef = useRef(null);
+  function onLogoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setSettings((s) => ({ ...s, logo: reader.result }));
+    reader.readAsDataURL(file);
+  }
+  return (
+    <div className="p-8 max-w-2xl mx-auto">
+      <h1 className="font-serif text-3xl text-emerald-950 mb-1">Settings</h1>
+      <p className="text-stone-500 text-sm mb-6">Branding shown on every generated Meeting Minutes PDF.</p>
+
+      <div className="bg-white rounded-xl border border-stone-200 p-5 mb-5">
+        <h3 className="font-serif text-base text-emerald-950 mb-3">Club Branding</h3>
+        <div className="flex items-center gap-4 mb-4">
+          <img src={settings.logo || defaultLogo} className="w-16 h-16 rounded-full object-contain bg-stone-50 border border-stone-200" />
+          <div>
+            <button onClick={() => fileRef.current.click()} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><Upload className="w-3.5 h-3.5" /> Upload Club Logo</button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onLogoUpload} />
+            {settings.logo && <button onClick={() => setSettings((s) => ({ ...s, logo: null }))} className="ml-2 text-xs text-stone-400 hover:text-red-600">Reset to default</button>}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Club Name">
+            <input className="input" value={settings.clubName} onChange={(e) => setSettings((s) => ({ ...s, clubName: e.target.value }))} />
+          </Field>
+          <Field label="Chapter">
+            <input className="input" value={settings.chapter} onChange={(e) => setSettings((s) => ({ ...s, chapter: e.target.value }))} />
+          </Field>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-stone-200 p-5 mb-5">
+        <h3 className="font-serif text-base text-emerald-950 mb-3">Access Control</h3>
+        <Field label="Board PIN (opens every department folder + Executive Board minutes)">
+          <input
+            className="input"
+            value={settings.boardPin || ""}
+            onChange={(e) => setSettings((s) => ({ ...s, boardPin: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+            placeholder="e.g. 8842"
+            inputMode="numeric"
+            type="password"
+          />
+        </Field>
+        <p className="text-xs text-stone-400 mt-2">Share this PIN only with the 8 board positions — President, Vice President, Treasurer, General Secretary, and the 4 department VPs. Regular department members use their own personal PIN, set for them on the Members page, which only opens their department's folder plus the Club folder.</p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-stone-200 p-5 text-sm text-stone-600 leading-relaxed">
+        <h3 className="font-serif text-base text-emerald-950 mb-2">How this app works</h3>
+        <p className="mb-2">Everything you enter is saved automatically in this browser — no server, no database setup. Click <strong>Save as PDF</strong> to open the finished minutes in a new tab and print them; choose "Save as PDF" as the destination in the print dialog. <strong>HTML</strong> and <strong>Word</strong> exports download instantly.</p>
+        <p>If the PDF tab doesn't open, your browser likely blocked the pop-up — allow pop-ups for this page and click the button again.</p>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------- mount ---------------------------- */
+const rootEl = document.getElementById("root");
+ReactDOM.createRoot(rootEl).render(<App />);
+
+</script>
+</body>
+</html>
