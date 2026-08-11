@@ -5,24 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ATLAS Minutes Studio</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
   html, body, #root { height: 100%; }
   body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #boot-error { display:none; position:fixed; inset:0; background:#fff; color:#7f1d1d; font-family: monospace; padding: 24px; white-space: pre-wrap; overflow:auto; z-index: 99999; }
 </style>
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" data-type="module" data-presets="react">
+<pre id="boot-error"></pre>
+<script>
+  window.addEventListener("error", function (e) {
+    var el = document.getElementById("boot-error");
+    el.style.display = "block";
+    el.textContent = "Failed to load the app:\n\n" + (e.error && e.error.stack ? e.error.stack : e.message);
+  });
+</script>
+<script type="module">
 import React, { useState, useEffect, useRef, useCallback } from "https://esm.sh/react@18.3.1";
 import ReactDOM from "https://esm.sh/react-dom@18.3.1/client";
-import {
-  LayoutDashboard, FileText, Users, Settings as SettingsIcon,
-  Plus, Trash2, Search, Copy, Play, Square, Sparkles, Download,
-  FileDown, CheckCircle2, Circle, X, ChevronRight, Upload, Clock,
-  CalendarDays, MapPin, UserCheck, AlertCircle, Wand2, Loader2,
-  Lock, LogOut, Folder,
-} from "https://esm.sh/lucide-react@0.263.1?external=react";
+import { LayoutDashboard, FileText, Users, Settings as SettingsIcon, Plus, Trash2, Search, Copy, Play, Square, Sparkles, Download, FileDown, CheckCircle2, Circle, X, ChevronRight, Upload, Clock, CalendarDays, MapPin, UserCheck, AlertCircle, Wand2, Loader2, Lock, LogOut, Folder } from "https://esm.sh/lucide-react@0.263.1?external=react";
 
 /* ---------------------------------------------------------------------
    ATLAS Minutes Studio
@@ -35,34 +37,19 @@ const DEFAULT_LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAApwAAAI4CAYA
 
 // NOTE: shortened placeholder logo below; replace at will in Settings > Club Branding.
 
-const DEPARTMENTS = [
-  "Executive Board",
-  "Marketing",
-  "Human Resources",
-  "Project Management",
-  "External Relations",
-  "Club",
-];
-
-const EXEC_POSITIONS = [
-  "President", "Vice President", "Treasurer", "General Secretary",
-  "Marketing VP", "Project Management VP", "External Relationships VP",
-  "Human Resources VP",
-];
-
+const DEPARTMENTS = ["Executive Board", "Marketing", "Human Resources", "Project Management", "External Relations", "Club"];
+const EXEC_POSITIONS = ["President", "Vice President", "Treasurer", "General Secretary", "Marketing VP", "Project Management VP", "External Relationships VP", "Human Resources VP"];
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-
 const todayISO = () => new Date().toISOString().slice(0, 10);
-
-const fmtDateDMY = (iso) => {
+const fmtDateDMY = iso => {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}-${m}-${y}`;
 };
-
-const fmtTime = (d) =>
-  d ? new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
-
+const fmtTime = d => d ? new Date(d).toLocaleTimeString([], {
+  hour: "2-digit",
+  minute: "2-digit"
+}) : "";
 function emptyMeeting() {
   return {
     id: uid(),
@@ -85,7 +72,7 @@ function emptyMeeting() {
     discussion: "",
     decisions: "",
     createdAt: Date.now(),
-    updatedAt: Date.now(),
+    updatedAt: Date.now()
   };
 }
 
@@ -116,26 +103,27 @@ async function saveJSON(key, value) {
    and point this function at that proxy instead. -------------------- */
 
 const AI_ENABLED = false;
-
 async function callClaude(prompt, system) {
   if (!AI_ENABLED) {
     throw new Error("AI polish is disabled in this deployment.");
   }
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
       max_tokens: 1000,
       system,
-      messages: [{ role: "user", content: prompt }],
-    }),
+      messages: [{
+        role: "user",
+        content: prompt
+      }]
+    })
   });
   const data = await res.json();
-  const text = (data.content || [])
-    .filter((b) => b.type === "text")
-    .map((b) => b.text)
-    .join("\n");
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n");
   return text.trim();
 }
 
@@ -147,223 +135,268 @@ export default function App() {
   const [page, setPage] = useState("dashboard");
   const [members, setMembers] = useState([]);
   const [meetings, setMeetings] = useState([]);
-  const [settings, setSettings] = useState({ logo: null, clubName: "ATLAS Future Leaders", chapter: "TBS Chapter", boardPin: "" });
+  const [settings, setSettings] = useState({
+    logo: null,
+    clubName: "ATLAS Future Leaders",
+    chapter: "TBS Chapter",
+    boardPin: ""
+  });
   const [activeMeetingId, setActiveMeetingId] = useState(null);
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast] = useState(null);
-
   useEffect(() => {
     (async () => {
-      const [m, mt, s] = await Promise.all([
-        loadJSON("members", []),
-        loadJSON("meetings", []),
-        loadJSON("settings", { logo: null, clubName: "ATLAS Future Leaders", chapter: "TBS Chapter", boardPin: "" }),
-      ]);
+      const [m, mt, s] = await Promise.all([loadJSON("members", []), loadJSON("meetings", []), loadJSON("settings", {
+        logo: null,
+        clubName: "ATLAS Future Leaders",
+        chapter: "TBS Chapter",
+        boardPin: ""
+      })]);
       setMembers(m);
       setMeetings(mt);
       setSettings(s);
       setLoaded(true);
     })();
   }, []);
-
-  useEffect(() => { if (loaded) saveJSON("members", members); }, [members, loaded]);
-  useEffect(() => { if (loaded) saveJSON("meetings", meetings); }, [meetings, loaded]);
-  useEffect(() => { if (loaded) saveJSON("settings", settings); }, [settings, loaded]);
-
+  useEffect(() => {
+    if (loaded) saveJSON("members", members);
+  }, [members, loaded]);
+  useEffect(() => {
+    if (loaded) saveJSON("meetings", meetings);
+  }, [meetings, loaded]);
+  useEffect(() => {
+    if (loaded) saveJSON("settings", settings);
+  }, [settings, loaded]);
   function showToast(msg) {
     setToast(msg);
     window.clearTimeout(showToast._t);
     showToast._t = window.setTimeout(() => setToast(null), 2400);
   }
-
   function upsertMeeting(next) {
     next.updatedAt = Date.now();
-    setMeetings((prev) => {
-      const idx = prev.findIndex((m) => m.id === next.id);
+    setMeetings(prev => {
+      const idx = prev.findIndex(m => m.id === next.id);
       if (idx === -1) return [next, ...prev];
       const copy = [...prev];
       copy[idx] = next;
       return copy;
     });
   }
-
   function startNewMeeting() {
     const m = emptyMeeting();
     upsertMeeting(m);
     setActiveMeetingId(m.id);
     setPage("editor");
   }
-
   const logoSrc = settings.logo || DEFAULT_LOGO;
-
   if (!loaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-stone-50">
-        <Loader2 className="w-6 h-6 animate-spin text-emerald-800" />
-      </div>
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      className: "min-h-screen flex items-center justify-center bg-stone-50"
+    }, /*#__PURE__*/React.createElement(Loader2, {
+      className: "w-6 h-6 animate-spin text-emerald-800"
+    }));
   }
-
-  return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 flex">
-      <style>{PRINT_CSS}</style>
-      <Sidebar page={page} setPage={setPage} logoSrc={logoSrc} clubName={settings.clubName} chapter={settings.chapter} />
-
-      <main className="flex-1 min-w-0">
-        {page === "dashboard" && (
-          <Dashboard
-            meetings={meetings}
-            members={members}
-            onNew={startNewMeeting}
-            onOpen={(id) => { setActiveMeetingId(id); setPage("editor"); }}
-          />
-        )}
-
-        {page === "editor" && (
-          <MeetingEditor
-            meeting={meetings.find((m) => m.id === activeMeetingId) || null}
-            members={members}
-            settings={settings}
-            logoSrc={logoSrc}
-            onChange={upsertMeeting}
-            onBack={() => setPage("dashboard")}
-            onFinalize={(m) => { upsertMeeting({ ...m, status: "final" }); showToast("Meeting minutes finalized."); }}
-            toast={showToast}
-          />
-        )}
-
-        {page === "folders" && (
-          <FoldersPage meetings={meetings} members={members} settings={settings} logoSrc={logoSrc} />
-        )}
-
-        {page === "members" && (
-          <MembersGate settings={settings} members={members} setMembers={setMembers} />
-        )}
-
-        {page === "settings" && (
-          <SettingsGate settings={settings} setSettings={setSettings} defaultLogo={DEFAULT_LOGO} />
-        )}
-      </main>
-
-      {toast && (
-        <div className="fixed bottom-6 right-6 bg-emerald-900 text-stone-50 px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2 no-print">
-          <CheckCircle2 className="w-4 h-4" /> {toast}
-        </div>
-      )}
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", {
+    className: "min-h-screen bg-stone-50 text-stone-900 flex"
+  }, /*#__PURE__*/React.createElement("style", null, PRINT_CSS), /*#__PURE__*/React.createElement(Sidebar, {
+    page: page,
+    setPage: setPage,
+    logoSrc: logoSrc,
+    clubName: settings.clubName,
+    chapter: settings.chapter
+  }), /*#__PURE__*/React.createElement("main", {
+    className: "flex-1 min-w-0"
+  }, page === "dashboard" && /*#__PURE__*/React.createElement(Dashboard, {
+    meetings: meetings,
+    members: members,
+    onNew: startNewMeeting,
+    onOpen: id => {
+      setActiveMeetingId(id);
+      setPage("editor");
+    }
+  }), page === "editor" && /*#__PURE__*/React.createElement(MeetingEditor, {
+    meeting: meetings.find(m => m.id === activeMeetingId) || null,
+    members: members,
+    settings: settings,
+    logoSrc: logoSrc,
+    onChange: upsertMeeting,
+    onBack: () => setPage("dashboard"),
+    onFinalize: m => {
+      upsertMeeting({
+        ...m,
+        status: "final"
+      });
+      showToast("Meeting minutes finalized.");
+    },
+    toast: showToast
+  }), page === "folders" && /*#__PURE__*/React.createElement(FoldersPage, {
+    meetings: meetings,
+    members: members,
+    settings: settings,
+    logoSrc: logoSrc
+  }), page === "members" && /*#__PURE__*/React.createElement(MembersGate, {
+    settings: settings,
+    members: members,
+    setMembers: setMembers
+  }), page === "settings" && /*#__PURE__*/React.createElement(SettingsGate, {
+    settings: settings,
+    setSettings: setSettings,
+    defaultLogo: DEFAULT_LOGO
+  })), toast && /*#__PURE__*/React.createElement("div", {
+    className: "fixed bottom-6 right-6 bg-emerald-900 text-stone-50 px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2 no-print"
+  }, /*#__PURE__*/React.createElement(CheckCircle2, {
+    className: "w-4 h-4"
+  }), " ", toast));
 }
 
 /* =========================================================================
    SIDEBAR
 ========================================================================= */
 
-function Sidebar({ page, setPage, logoSrc, clubName, chapter }) {
-  const items = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "editor", label: "New Meeting", icon: FileText },
-    { id: "folders", label: "Folders (PIN)", icon: Lock },
-    { id: "members", label: "Members", icon: Users },
-    { id: "settings", label: "Settings", icon: SettingsIcon },
-  ];
-  return (
-    <aside className="w-64 shrink-0 bg-emerald-950 text-stone-100 flex flex-col no-print">
-      <div className="p-5 border-b border-emerald-900 flex items-center gap-3">
-        <img src={logoSrc} alt="Club seal" className="w-11 h-11 rounded-full object-contain bg-white p-0.5" />
-        <div className="min-w-0">
-          <div className="font-serif text-base leading-tight truncate">{clubName}</div>
-          <div className="text-xs text-emerald-400 truncate">{chapter}</div>
-        </div>
-      </div>
-      <nav className="flex-1 p-3 space-y-1">
-        {items.map((it) => {
-          const Icon = it.icon;
-          const active = page === it.id;
-          return (
-            <button
-              key={it.id}
-              onClick={() => setPage(it.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                active ? "bg-emerald-800 text-white" : "text-emerald-200 hover:bg-emerald-900"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {it.label}
-            </button>
-          );
-        })}
-      </nav>
-      <div className="p-4 text-[11px] text-emerald-500 border-t border-emerald-900">
-        Minutes Studio &middot; runs entirely in your browser
-      </div>
-    </aside>
-  );
+function Sidebar({
+  page,
+  setPage,
+  logoSrc,
+  clubName,
+  chapter
+}) {
+  const items = [{
+    id: "dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard
+  }, {
+    id: "editor",
+    label: "New Meeting",
+    icon: FileText
+  }, {
+    id: "folders",
+    label: "Folders (PIN)",
+    icon: Lock
+  }, {
+    id: "members",
+    label: "Members",
+    icon: Users
+  }, {
+    id: "settings",
+    label: "Settings",
+    icon: SettingsIcon
+  }];
+  return /*#__PURE__*/React.createElement("aside", {
+    className: "w-64 shrink-0 bg-emerald-950 text-stone-100 flex flex-col no-print"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "p-5 border-b border-emerald-900 flex items-center gap-3"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: logoSrc,
+    alt: "Club seal",
+    className: "w-11 h-11 rounded-full object-contain bg-white p-0.5"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-serif text-base leading-tight truncate"
+  }, clubName), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-emerald-400 truncate"
+  }, chapter))), /*#__PURE__*/React.createElement("nav", {
+    className: "flex-1 p-3 space-y-1"
+  }, items.map(it => {
+    const Icon = it.icon;
+    const active = page === it.id;
+    return /*#__PURE__*/React.createElement("button", {
+      key: it.id,
+      onClick: () => setPage(it.id),
+      className: `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${active ? "bg-emerald-800 text-white" : "text-emerald-200 hover:bg-emerald-900"}`
+    }, /*#__PURE__*/React.createElement(Icon, {
+      className: "w-4 h-4"
+    }), it.label);
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "p-4 text-[11px] text-emerald-500 border-t border-emerald-900"
+  }, "Minutes Studio · runs entirely in your browser"));
 }
 
 /* =========================================================================
    DASHBOARD
 ========================================================================= */
 
-function Dashboard({ meetings, members, onNew, onOpen }) {
+function Dashboard({
+  meetings,
+  members,
+  onNew,
+  onOpen
+}) {
   const total = meetings.length;
-  const drafts = meetings.filter((m) => m.status === "draft").length;
+  const drafts = meetings.filter(m => m.status === "draft").length;
   const recent = [...meetings].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
-
-  return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="font-serif text-3xl text-emerald-950">Dashboard</h1>
-          <p className="text-stone-500 mt-1 text-sm">A quick look at your club's meeting activity.</p>
-        </div>
-        <button onClick={onNew} className="flex items-center gap-2 bg-emerald-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-800">
-          <Plus className="w-4 h-4" /> Quick Create Meeting
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard label="Total Meetings" value={total} icon={FileText} />
-        <StatCard label="Drafts in Progress" value={drafts} icon={Clock} />
-        <StatCard label="Club Members" value={members.length} icon={Users} />
-      </div>
-
-      <div className="bg-white rounded-xl border border-stone-200 p-5 max-w-2xl">
-        <h2 className="font-serif text-lg text-emerald-950 mb-3">Recent Meetings</h2>
-        {recent.length === 0 && <EmptyHint text="No meetings yet. Create your first one above." />}
-        <div className="space-y-2">
-          {recent.map((m) => (
-            <button key={m.id} onClick={() => onOpen(m.id)} className="w-full text-left flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-stone-50 border border-stone-100">
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{m.purpose || "Untitled meeting"}</div>
-                <div className="text-xs text-stone-500">{m.department} &middot; {fmtDateDMY(m.date)}</div>
-              </div>
-              <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full ${m.status === "final" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-                {m.status}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-8 max-w-5xl mx-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-start justify-between mb-8"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", {
+    className: "font-serif text-3xl text-emerald-950"
+  }, "Dashboard"), /*#__PURE__*/React.createElement("p", {
+    className: "text-stone-500 mt-1 text-sm"
+  }, "A quick look at your club's meeting activity.")), /*#__PURE__*/React.createElement("button", {
+    onClick: onNew,
+    className: "flex items-center gap-2 bg-emerald-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-emerald-800"
+  }, /*#__PURE__*/React.createElement(Plus, {
+    className: "w-4 h-4"
+  }), " Quick Create Meeting")), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-3 gap-4 mb-8"
+  }, /*#__PURE__*/React.createElement(StatCard, {
+    label: "Total Meetings",
+    value: total,
+    icon: FileText
+  }), /*#__PURE__*/React.createElement(StatCard, {
+    label: "Drafts in Progress",
+    value: drafts,
+    icon: Clock
+  }), /*#__PURE__*/React.createElement(StatCard, {
+    label: "Club Members",
+    value: members.length,
+    icon: Users
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5 max-w-2xl"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "font-serif text-lg text-emerald-950 mb-3"
+  }, "Recent Meetings"), recent.length === 0 && /*#__PURE__*/React.createElement(EmptyHint, {
+    text: "No meetings yet. Create your first one above."
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, recent.map(m => /*#__PURE__*/React.createElement("button", {
+    key: m.id,
+    onClick: () => onOpen(m.id),
+    className: "w-full text-left flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-stone-50 border border-stone-100"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium truncate"
+  }, m.purpose || "Untitled meeting"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-stone-500"
+  }, m.department, " · ", fmtDateDMY(m.date))), /*#__PURE__*/React.createElement("span", {
+    className: `text-[10px] uppercase tracking-wide px-2 py-1 rounded-full ${m.status === "final" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`
+  }, m.status))))));
 }
-
-function StatCard({ label, value, icon: Icon }) {
-  return (
-    <div className="bg-white rounded-xl border border-stone-200 p-5 flex items-center gap-4">
-      <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-        <Icon className="w-5 h-5 text-emerald-800" />
-      </div>
-      <div>
-        <div className="text-2xl font-serif text-emerald-950">{value}</div>
-        <div className="text-xs text-stone-500">{label}</div>
-      </div>
-    </div>
-  );
+function StatCard({
+  label,
+  value,
+  icon: Icon
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5 flex items-center gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement(Icon, {
+    className: "w-5 h-5 text-emerald-800"
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-2xl font-serif text-emerald-950"
+  }, value), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-stone-500"
+  }, label)));
 }
-
-function EmptyHint({ text }) {
-  return <div className="text-sm text-stone-400 py-6 text-center">{text}</div>;
+function EmptyHint({
+  text
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "text-sm text-stone-400 py-6 text-center"
+  }, text);
 }
 
 /* =========================================================================
@@ -404,14 +437,23 @@ select.input { cursor: pointer; }
    MEETING EDITOR
 ========================================================================= */
 
-function MeetingEditor({ meeting, members, settings, logoSrc, onChange, onBack, onFinalize, toast }) {
+function MeetingEditor({
+  meeting,
+  members,
+  settings,
+  logoSrc,
+  onChange,
+  onBack,
+  onFinalize,
+  toast
+}) {
   const [local, setLocal] = useState(meeting || emptyMeeting());
   const [tab, setTab] = useState("form");
   const [aiBusy, setAiBusy] = useState(null);
   const saveTimer = useRef(null);
-
-  useEffect(() => { if (meeting) setLocal(meeting); }, [meeting && meeting.id]);
-
+  useEffect(() => {
+    if (meeting) setLocal(meeting);
+  }, [meeting && meeting.id]);
   useEffect(() => {
     if (!local) return;
     window.clearTimeout(saveTimer.current);
@@ -419,73 +461,113 @@ function MeetingEditor({ meeting, members, settings, logoSrc, onChange, onBack, 
     return () => window.clearTimeout(saveTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [local]);
-
   if (!local) {
-    return (
-      <div className="p-8">
-        <EmptyHint text="Choose a meeting from the dashboard, or start a new one." />
-      </div>
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      className: "p-8"
+    }, /*#__PURE__*/React.createElement(EmptyHint, {
+      text: "Choose a meeting from the dashboard, or start a new one."
+    }));
   }
-
-  function set(patch) { setLocal((p) => ({ ...p, ...patch })); }
+  function set(patch) {
+    setLocal(p => ({
+      ...p,
+      ...patch
+    }));
+  }
 
   // Single source of truth: setting a member's status clears the other two lists first.
   function setAttendanceStatus(id, status) {
     const current = local.presentIds.includes(id) ? "present" : local.absentIds.includes(id) ? "absent" : local.justifiedIds.includes(id) ? "justified" : null;
-    const present = local.presentIds.filter((x) => x !== id);
-    const absent = local.absentIds.filter((x) => x !== id);
-    const justified = local.justifiedIds.filter((x) => x !== id);
+    const present = local.presentIds.filter(x => x !== id);
+    const absent = local.absentIds.filter(x => x !== id);
+    const justified = local.justifiedIds.filter(x => x !== id);
     if (current === status) {
       // clicking the already-selected status again clears it (back to "unmarked")
-      set({ presentIds: present, absentIds: absent, justifiedIds: justified });
+      set({
+        presentIds: present,
+        absentIds: absent,
+        justifiedIds: justified
+      });
       return;
     }
     if (status === "present") present.push(id);
     if (status === "absent") absent.push(id);
     if (status === "justified") justified.push(id);
-    set({ presentIds: present, absentIds: absent, justifiedIds: justified });
+    set({
+      presentIds: present,
+      absentIds: absent,
+      justifiedIds: justified
+    });
   }
-
-  const pool = members.filter((m) =>
-    local.department === "Executive Board"
-      ? EXEC_POSITIONS.includes(m.position)
-      : (m.department === local.department || EXEC_POSITIONS.includes(m.position))
-  );
-
-  function addTask() { set({ tasks: [...local.tasks, { id: uid(), task: "", assignedTo: "", deadline: "" }] }); }
-  function updateTask(id, patch) { set({ tasks: local.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) }); }
-  function removeTask(id) { set({ tasks: local.tasks.filter((t) => t.id !== id) }); }
-
-  function addAgenda() { set({ agenda: [...local.agenda, ""] }); }
-  function updateAgenda(i, val) { const a = [...local.agenda]; a[i] = val; set({ agenda: a }); }
-  function removeAgenda(i) { set({ agenda: local.agenda.filter((_, idx) => idx !== i) }); }
-
+  const pool = members.filter(m => local.department === "Executive Board" ? EXEC_POSITIONS.includes(m.position) : m.department === local.department || EXEC_POSITIONS.includes(m.position));
+  function addTask() {
+    set({
+      tasks: [...local.tasks, {
+        id: uid(),
+        task: "",
+        assignedTo: "",
+        deadline: ""
+      }]
+    });
+  }
+  function updateTask(id, patch) {
+    set({
+      tasks: local.tasks.map(t => t.id === id ? {
+        ...t,
+        ...patch
+      } : t)
+    });
+  }
+  function removeTask(id) {
+    set({
+      tasks: local.tasks.filter(t => t.id !== id)
+    });
+  }
+  function addAgenda() {
+    set({
+      agenda: [...local.agenda, ""]
+    });
+  }
+  function updateAgenda(i, val) {
+    const a = [...local.agenda];
+    a[i] = val;
+    set({
+      agenda: a
+    });
+  }
+  function removeAgenda(i) {
+    set({
+      agenda: local.agenda.filter((_, idx) => idx !== i)
+    });
+  }
   function startMeetingNow() {
     const now = Date.now();
-    set({ startTimestamp: now, startTime: fmtTime(now) });
+    set({
+      startTimestamp: now,
+      startTime: fmtTime(now)
+    });
   }
   function endMeetingNow() {
     const now = Date.now();
-    set({ endTimestamp: now, endTime: fmtTime(now) });
+    set({
+      endTimestamp: now,
+      endTime: fmtTime(now)
+    });
   }
-
   async function improveField(field) {
     if (!local[field] || !local[field].trim()) return;
     setAiBusy(field);
     try {
-      const out = await callClaude(
-        local[field],
-        "You proofread and lightly polish meeting-minutes text. Correct grammar and spelling, make the tone clear and professional, and keep it concise. Never invent facts, names, numbers or information that is not already present. Return only the corrected text with no preamble."
-      );
-      if (out) set({ [field]: out });
+      const out = await callClaude(local[field], "You proofread and lightly polish meeting-minutes text. Correct grammar and spelling, make the tone clear and professional, and keep it concise. Never invent facts, names, numbers or information that is not already present. Return only the corrected text with no preamble.");
+      if (out) set({
+        [field]: out
+      });
     } catch (e) {
       toast("AI request failed. Check your connection and try again.");
     } finally {
       setAiBusy(null);
     }
   }
-
   const fileName = `${local.department} Meeting Minutes ${fmtDateDMY(local.date)}`.trim();
 
   // --- PDF / Print -----------------------------------------------------
@@ -515,290 +597,461 @@ function MeetingEditor({ meeting, members, settings, logoSrc, onChange, onBack, 
       }
     }, 350);
   }
-
   function downloadHTML() {
     const html = buildPrintableHTML(local, members, logoSrc, settings);
-    const blob = new Blob([html], { type: "text/html" });
+    const blob = new Blob([html], {
+      type: "text/html"
+    });
     triggerDownload(blob, `${fileName}.html`);
   }
   function downloadWord() {
     const html = buildPrintableHTML(local, members, logoSrc, settings);
-    const blob = new Blob(["\ufeff", html], { type: "application/msword" });
+    const blob = new Blob(["\ufeff", html], {
+      type: "application/msword"
+    });
     triggerDownload(blob, `${fileName}.doc`);
   }
-
-  return (
-    <div className="min-h-screen">
-      <div className="no-print sticky top-0 z-10 bg-stone-50/95 backdrop-blur border-b border-stone-200 px-8 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <button onClick={onBack} className="text-stone-400 hover:text-stone-700"><ChevronRight className="w-5 h-5 rotate-180" /></button>
-          <div className="min-w-0">
-            <div className="font-serif text-lg text-emerald-950 truncate">{local.purpose || "Untitled meeting"}</div>
-            <div className="text-xs text-stone-500">{fileName}.pdf</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-stone-200 rounded-lg p-1 mr-2">
-            <button onClick={() => setTab("form")} className={`px-3 py-1.5 text-xs rounded-md ${tab === "form" ? "bg-white shadow-sm" : "text-stone-500"}`}>Edit</button>
-            <button onClick={() => setTab("preview")} className={`px-3 py-1.5 text-xs rounded-md ${tab === "preview" ? "bg-white shadow-sm" : "text-stone-500"}`}>Preview</button>
-          </div>
-          <button onClick={downloadHTML} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><FileDown className="w-3.5 h-3.5" /> HTML</button>
-          <button onClick={downloadWord} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><FileDown className="w-3.5 h-3.5" /> Word</button>
-          <button onClick={doPrint} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-900 text-white hover:bg-emerald-800"><Download className="w-3.5 h-3.5" /> Save as PDF</button>
-          <button onClick={() => onFinalize(local)} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-800"><CheckCircle2 className="w-3.5 h-3.5" /> Finalize</button>
-        </div>
-      </div>
-
-      {tab === "form" ? (
-        <div className="max-w-3xl mx-auto p-8 space-y-6 no-print">
-          <Section title="Meeting Information">
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Department / Template">
-                <select value={local.department} onChange={(e) => set({ department: e.target.value })} className="input">
-                  {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-                </select>
-              </Field>
-              <Field label="Meeting Purpose">
-                <input value={local.purpose} onChange={(e) => set({ purpose: e.target.value })} placeholder="e.g. Weekly Marketing Sync" className="input" />
-              </Field>
-              <Field label="Date">
-                <input type="date" value={local.date} onChange={(e) => set({ date: e.target.value })} className="input" />
-              </Field>
-              <Field label="Location">
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => set({ location: "Online" })} className={`flex-1 px-3 py-2 rounded-lg text-sm border ${local.location === "Online" ? "bg-emerald-900 text-white border-emerald-900" : "border-stone-300 text-stone-600 hover:bg-stone-50"}`}>Online</button>
-                  <button type="button" onClick={() => set({ location: "In Person" })} className={`flex-1 px-3 py-2 rounded-lg text-sm border ${local.location === "In Person" ? "bg-emerald-900 text-white border-emerald-900" : "border-stone-300 text-stone-600 hover:bg-stone-50"}`}>In Person</button>
-                </div>
-              </Field>
-              <Field label="Start Time">
-                <div className="flex gap-2">
-                  <input value={local.startTime} onChange={(e) => set({ startTime: e.target.value })} placeholder="--:--" className="input" />
-                  <button onClick={startMeetingNow} className="px-3 rounded-lg border border-emerald-700 text-emerald-800 text-xs flex items-center gap-1 shrink-0"><Play className="w-3 h-3" /> Start</button>
-                </div>
-              </Field>
-              <Field label="End Time">
-                <div className="flex gap-2">
-                  <input value={local.endTime} onChange={(e) => set({ endTime: e.target.value })} placeholder="--:--" className="input" />
-                  <button onClick={endMeetingNow} className="px-3 rounded-lg border border-stone-400 text-stone-700 text-xs flex items-center gap-1 shrink-0"><Square className="w-3 h-3" /> End</button>
-                </div>
-              </Field>
-              <Field label="Meeting Facilitator">
-                <select value={local.facilitator} onChange={(e) => set({ facilitator: e.target.value })} className="input">
-                  <option value="">Select facilitator...</option>
-                  {members.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
-                </select>
-              </Field>
-            </div>
-          </Section>
-
-          <Section title="Attendance" subtitle="Mark every member Present, Absent, or Justified.">
-            {pool.length === 0 ? (
-              <EmptyHint text="No members found for this department yet. Add them on the Members page." />
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {pool.map((m) => {
-                  const present = local.presentIds.includes(m.id);
-                  const absent = local.absentIds.includes(m.id);
-                  const justified = local.justifiedIds.includes(m.id);
-                  return (
-                    <div key={m.id} className={`flex items-center justify-between px-3 py-2 rounded-lg border gap-2 ${present ? "border-emerald-300 bg-emerald-50" : absent ? "border-amber-200 bg-amber-50" : justified ? "border-sky-200 bg-sky-50" : "border-stone-200"}`}>
-                      <span className="text-sm truncate min-w-0">{m.name}</span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button onClick={() => setAttendanceStatus(m.id, "present")} className={`text-[10px] px-2 py-1 rounded-full ${present ? "bg-emerald-700 text-white" : "bg-stone-100 text-stone-500"}`}>Present</button>
-                        <button onClick={() => setAttendanceStatus(m.id, "absent")} className={`text-[10px] px-2 py-1 rounded-full ${absent ? "bg-amber-600 text-white" : "bg-stone-100 text-stone-500"}`}>Absent</button>
-                        <button onClick={() => setAttendanceStatus(m.id, "justified")} className={`text-[10px] px-2 py-1 rounded-full ${justified ? "bg-sky-600 text-white" : "bg-stone-100 text-stone-500"}`}>Justified</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <div className="flex gap-4 mt-3 text-xs text-stone-500">
-              <span>{local.presentIds.length} present</span>
-              <span>{local.absentIds.length} absent</span>
-              <span>{local.justifiedIds.length} justified</span>
-            </div>
-          </Section>
-
-          <Section title="Action Items">
-            <div className="space-y-2">
-              {local.tasks.map((t) => (
-                <div key={t.id} className="grid grid-cols-[1fr_1fr_140px_32px] gap-2">
-                  <input value={t.task} onChange={(e) => updateTask(t.id, { task: e.target.value })} placeholder="Task" className="input" />
-                  <select value={t.assignedTo} onChange={(e) => updateTask(t.id, { assignedTo: e.target.value })} className="input">
-                    <option value="">Assign to...</option>
-                    {members.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
-                  </select>
-                  <input type="date" value={t.deadline} onChange={(e) => updateTask(t.id, { deadline: e.target.value })} className="input" />
-                  <button onClick={() => removeTask(t.id)} className="text-stone-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              ))}
-            </div>
-            <button onClick={addTask} className="mt-2 text-xs flex items-center gap-1 text-emerald-800 font-medium"><Plus className="w-3.5 h-3.5" /> Add Task</button>
-          </Section>
-
-          <Section title="Agenda">
-            <div className="space-y-2">
-              {local.agenda.map((a, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <span className="text-xs text-stone-400 w-4">{i + 1}.</span>
-                  <input value={a} onChange={(e) => updateAgenda(i, e.target.value)} placeholder={`Agenda item ${i + 1}`} className="input" />
-                  <button onClick={() => removeAgenda(i)} className="text-stone-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                </div>
-              ))}
-            </div>
-            <button onClick={addAgenda} className="mt-2 text-xs flex items-center gap-1 text-emerald-800 font-medium"><Plus className="w-3.5 h-3.5" /> Add Agenda Item</button>
-          </Section>
-
-          <TextSection title="Announcements" value={local.announcements} onChange={(v) => set({ announcements: v })} onImprove={() => improveField("announcements")} busy={aiBusy === "announcements"} />
-          <TextSection title="Discussion" value={local.discussion} onChange={(v) => set({ discussion: v })} onImprove={() => improveField("discussion")} busy={aiBusy === "discussion"} rows={6} />
-          <TextSection title="Decisions Made" value={local.decisions} onChange={(v) => set({ decisions: v })} onImprove={() => improveField("decisions")} busy={aiBusy === "decisions"} />
-        </div>
-      ) : (
-        <div className="preview-wrap">
-          <PrintableSheet meeting={local} members={members} logoSrc={logoSrc} settings={settings} />
-        </div>
-      )}
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", {
+    className: "min-h-screen"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "no-print sticky top-0 z-10 bg-stone-50/95 backdrop-blur border-b border-stone-200 px-8 py-4 flex items-center justify-between"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 min-w-0"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: onBack,
+    className: "text-stone-400 hover:text-stone-700"
+  }, /*#__PURE__*/React.createElement(ChevronRight, {
+    className: "w-5 h-5 rotate-180"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "min-w-0"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "font-serif text-lg text-emerald-950 truncate"
+  }, local.purpose || "Untitled meeting"), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-stone-500"
+  }, fileName, ".pdf"))), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex bg-stone-200 rounded-lg p-1 mr-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTab("form"),
+    className: `px-3 py-1.5 text-xs rounded-md ${tab === "form" ? "bg-white shadow-sm" : "text-stone-500"}`
+  }, "Edit"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTab("preview"),
+    className: `px-3 py-1.5 text-xs rounded-md ${tab === "preview" ? "bg-white shadow-sm" : "text-stone-500"}`
+  }, "Preview")), /*#__PURE__*/React.createElement("button", {
+    onClick: downloadHTML,
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+  }, /*#__PURE__*/React.createElement(FileDown, {
+    className: "w-3.5 h-3.5"
+  }), " HTML"), /*#__PURE__*/React.createElement("button", {
+    onClick: downloadWord,
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+  }, /*#__PURE__*/React.createElement(FileDown, {
+    className: "w-3.5 h-3.5"
+  }), " Word"), /*#__PURE__*/React.createElement("button", {
+    onClick: doPrint,
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-900 text-white hover:bg-emerald-800"
+  }, /*#__PURE__*/React.createElement(Download, {
+    className: "w-3.5 h-3.5"
+  }), " Save as PDF"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => onFinalize(local),
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-800"
+  }, /*#__PURE__*/React.createElement(CheckCircle2, {
+    className: "w-3.5 h-3.5"
+  }), " Finalize"))), tab === "form" ? /*#__PURE__*/React.createElement("div", {
+    className: "max-w-3xl mx-auto p-8 space-y-6 no-print"
+  }, /*#__PURE__*/React.createElement(Section, {
+    title: "Meeting Information"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-4"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Department / Template"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: local.department,
+    onChange: e => set({
+      department: e.target.value
+    }),
+    className: "input"
+  }, DEPARTMENTS.map(d => /*#__PURE__*/React.createElement("option", {
+    key: d
+  }, d)))), /*#__PURE__*/React.createElement(Field, {
+    label: "Meeting Purpose"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: local.purpose,
+    onChange: e => set({
+      purpose: e.target.value
+    }),
+    placeholder: "e.g. Weekly Marketing Sync",
+    className: "input"
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Date"
+  }, /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: local.date,
+    onChange: e => set({
+      date: e.target.value
+    }),
+    className: "input"
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Location"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => set({
+      location: "Online"
+    }),
+    className: `flex-1 px-3 py-2 rounded-lg text-sm border ${local.location === "Online" ? "bg-emerald-900 text-white border-emerald-900" : "border-stone-300 text-stone-600 hover:bg-stone-50"}`
+  }, "Online"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => set({
+      location: "In Person"
+    }),
+    className: `flex-1 px-3 py-2 rounded-lg text-sm border ${local.location === "In Person" ? "bg-emerald-900 text-white border-emerald-900" : "border-stone-300 text-stone-600 hover:bg-stone-50"}`
+  }, "In Person"))), /*#__PURE__*/React.createElement(Field, {
+    label: "Start Time"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: local.startTime,
+    onChange: e => set({
+      startTime: e.target.value
+    }),
+    placeholder: "--:--",
+    className: "input"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: startMeetingNow,
+    className: "px-3 rounded-lg border border-emerald-700 text-emerald-800 text-xs flex items-center gap-1 shrink-0"
+  }, /*#__PURE__*/React.createElement(Play, {
+    className: "w-3 h-3"
+  }), " Start"))), /*#__PURE__*/React.createElement(Field, {
+    label: "End Time"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: local.endTime,
+    onChange: e => set({
+      endTime: e.target.value
+    }),
+    placeholder: "--:--",
+    className: "input"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: endMeetingNow,
+    className: "px-3 rounded-lg border border-stone-400 text-stone-700 text-xs flex items-center gap-1 shrink-0"
+  }, /*#__PURE__*/React.createElement(Square, {
+    className: "w-3 h-3"
+  }), " End"))), /*#__PURE__*/React.createElement(Field, {
+    label: "Meeting Facilitator"
+  }, /*#__PURE__*/React.createElement("select", {
+    value: local.facilitator,
+    onChange: e => set({
+      facilitator: e.target.value
+    }),
+    className: "input"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "Select facilitator..."), members.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.name
+  }, m.name)))))), /*#__PURE__*/React.createElement(Section, {
+    title: "Attendance",
+    subtitle: "Mark every member Present, Absent, or Justified."
+  }, pool.length === 0 ? /*#__PURE__*/React.createElement(EmptyHint, {
+    text: "No members found for this department yet. Add them on the Members page."
+  }) : /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-2"
+  }, pool.map(m => {
+    const present = local.presentIds.includes(m.id);
+    const absent = local.absentIds.includes(m.id);
+    const justified = local.justifiedIds.includes(m.id);
+    return /*#__PURE__*/React.createElement("div", {
+      key: m.id,
+      className: `flex items-center justify-between px-3 py-2 rounded-lg border gap-2 ${present ? "border-emerald-300 bg-emerald-50" : absent ? "border-amber-200 bg-amber-50" : justified ? "border-sky-200 bg-sky-50" : "border-stone-200"}`
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-sm truncate min-w-0"
+    }, m.name), /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-1 shrink-0"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAttendanceStatus(m.id, "present"),
+      className: `text-[10px] px-2 py-1 rounded-full ${present ? "bg-emerald-700 text-white" : "bg-stone-100 text-stone-500"}`
+    }, "Present"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAttendanceStatus(m.id, "absent"),
+      className: `text-[10px] px-2 py-1 rounded-full ${absent ? "bg-amber-600 text-white" : "bg-stone-100 text-stone-500"}`
+    }, "Absent"), /*#__PURE__*/React.createElement("button", {
+      onClick: () => setAttendanceStatus(m.id, "justified"),
+      className: `text-[10px] px-2 py-1 rounded-full ${justified ? "bg-sky-600 text-white" : "bg-stone-100 text-stone-500"}`
+    }, "Justified")));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-4 mt-3 text-xs text-stone-500"
+  }, /*#__PURE__*/React.createElement("span", null, local.presentIds.length, " present"), /*#__PURE__*/React.createElement("span", null, local.absentIds.length, " absent"), /*#__PURE__*/React.createElement("span", null, local.justifiedIds.length, " justified"))), /*#__PURE__*/React.createElement(Section, {
+    title: "Action Items"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, local.tasks.map(t => /*#__PURE__*/React.createElement("div", {
+    key: t.id,
+    className: "grid grid-cols-[1fr_1fr_140px_32px] gap-2"
+  }, /*#__PURE__*/React.createElement("input", {
+    value: t.task,
+    onChange: e => updateTask(t.id, {
+      task: e.target.value
+    }),
+    placeholder: "Task",
+    className: "input"
+  }), /*#__PURE__*/React.createElement("select", {
+    value: t.assignedTo,
+    onChange: e => updateTask(t.id, {
+      assignedTo: e.target.value
+    }),
+    className: "input"
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, "Assign to..."), members.map(m => /*#__PURE__*/React.createElement("option", {
+    key: m.id,
+    value: m.name
+  }, m.name))), /*#__PURE__*/React.createElement("input", {
+    type: "date",
+    value: t.deadline,
+    onChange: e => updateTask(t.id, {
+      deadline: e.target.value
+    }),
+    className: "input"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeTask(t.id),
+    className: "text-stone-400 hover:text-red-600"
+  }, /*#__PURE__*/React.createElement(Trash2, {
+    className: "w-4 h-4"
+  }))))), /*#__PURE__*/React.createElement("button", {
+    onClick: addTask,
+    className: "mt-2 text-xs flex items-center gap-1 text-emerald-800 font-medium"
+  }, /*#__PURE__*/React.createElement(Plus, {
+    className: "w-3.5 h-3.5"
+  }), " Add Task")), /*#__PURE__*/React.createElement(Section, {
+    title: "Agenda"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "space-y-2"
+  }, local.agenda.map((a, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "flex items-center gap-2"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-stone-400 w-4"
+  }, i + 1, "."), /*#__PURE__*/React.createElement("input", {
+    value: a,
+    onChange: e => updateAgenda(i, e.target.value),
+    placeholder: `Agenda item ${i + 1}`,
+    className: "input"
+  }), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeAgenda(i),
+    className: "text-stone-400 hover:text-red-600"
+  }, /*#__PURE__*/React.createElement(Trash2, {
+    className: "w-4 h-4"
+  }))))), /*#__PURE__*/React.createElement("button", {
+    onClick: addAgenda,
+    className: "mt-2 text-xs flex items-center gap-1 text-emerald-800 font-medium"
+  }, /*#__PURE__*/React.createElement(Plus, {
+    className: "w-3.5 h-3.5"
+  }), " Add Agenda Item")), /*#__PURE__*/React.createElement(TextSection, {
+    title: "Announcements",
+    value: local.announcements,
+    onChange: v => set({
+      announcements: v
+    }),
+    onImprove: () => improveField("announcements"),
+    busy: aiBusy === "announcements"
+  }), /*#__PURE__*/React.createElement(TextSection, {
+    title: "Discussion",
+    value: local.discussion,
+    onChange: v => set({
+      discussion: v
+    }),
+    onImprove: () => improveField("discussion"),
+    busy: aiBusy === "discussion",
+    rows: 6
+  }), /*#__PURE__*/React.createElement(TextSection, {
+    title: "Decisions Made",
+    value: local.decisions,
+    onChange: v => set({
+      decisions: v
+    }),
+    onImprove: () => improveField("decisions"),
+    busy: aiBusy === "decisions"
+  })) : /*#__PURE__*/React.createElement("div", {
+    className: "preview-wrap"
+  }, /*#__PURE__*/React.createElement(PrintableSheet, {
+    meeting: local,
+    members: members,
+    logoSrc: logoSrc,
+    settings: settings
+  })));
 }
-
-function Section({ title, subtitle, children }) {
-  return (
-    <div className="bg-white rounded-xl border border-stone-200 p-5">
-      <h3 className="font-serif text-base text-emerald-950">{title}</h3>
-      {subtitle && <p className="text-xs text-stone-500 mt-0.5 mb-3">{subtitle}</p>}
-      <div className={subtitle ? "" : "mt-3"}>{children}</div>
-    </div>
-  );
+function Section({
+  title,
+  subtitle,
+  children
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-serif text-base text-emerald-950"
+  }, title), subtitle && /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-stone-500 mt-0.5 mb-3"
+  }, subtitle), /*#__PURE__*/React.createElement("div", {
+    className: subtitle ? "" : "mt-3"
+  }, children));
 }
-function Field({ label, children }) {
-  return (
-    <label className="block">
-      <span className="text-xs text-stone-500 mb-1 block">{label}</span>
-      {children}
-    </label>
-  );
+function Field({
+  label,
+  children
+}) {
+  return /*#__PURE__*/React.createElement("label", {
+    className: "block"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs text-stone-500 mb-1 block"
+  }, label), children);
 }
-function TextSection({ title, value, onChange, onImprove, busy, rows = 4 }) {
-  return (
-    <div className="bg-white rounded-xl border border-stone-200 p-5">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-serif text-base text-emerald-950">{title}</h3>
-        <button onClick={onImprove} disabled={busy || !AI_ENABLED} title={!AI_ENABLED ? "AI polish is turned off in this deployment" : ""} className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100 disabled:opacity-50">
-          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />} Improve Writing
-        </button>
-      </div>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={rows} className="input" />
-    </div>
-  );
+function TextSection({
+  title,
+  value,
+  onChange,
+  onImprove,
+  busy,
+  rows = 4
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-2"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-serif text-base text-emerald-950"
+  }, title), /*#__PURE__*/React.createElement("button", {
+    onClick: onImprove,
+    disabled: busy || !AI_ENABLED,
+    title: !AI_ENABLED ? "AI polish is turned off in this deployment" : "",
+    className: "flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-full bg-violet-50 text-violet-700 hover:bg-violet-100 disabled:opacity-50"
+  }, busy ? /*#__PURE__*/React.createElement(Loader2, {
+    className: "w-3 h-3 animate-spin"
+  }) : /*#__PURE__*/React.createElement(Sparkles, {
+    className: "w-3 h-3"
+  }), " Improve Writing")), /*#__PURE__*/React.createElement("textarea", {
+    value: value,
+    onChange: e => onChange(e.target.value),
+    rows: rows,
+    className: "input"
+  }));
 }
 
 /* Printable / PDF sheet, styled to match the official ATLAS template */
 
-function PrintableSheet({ meeting, members, logoSrc, settings }) {
-  const byId = Object.fromEntries(members.map((m) => [m.id, m]));
-  const presentNames = meeting.presentIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
-  const absentOnly = meeting.absentIds.filter((id) => !meeting.justifiedIds.includes(id));
-  const absentNames = absentOnly.map((id) => byId[id]?.name).filter(Boolean).join(", ");
-  const justifiedNames = meeting.justifiedIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+function PrintableSheet({
+  meeting,
+  members,
+  logoSrc,
+  settings
+}) {
+  const byId = Object.fromEntries(members.map(m => [m.id, m]));
+  const presentNames = meeting.presentIds.map(id => byId[id]?.name).filter(Boolean).join(", ");
+  const absentOnly = meeting.absentIds.filter(id => !meeting.justifiedIds.includes(id));
+  const absentNames = absentOnly.map(id => byId[id]?.name).filter(Boolean).join(", ");
+  const justifiedNames = meeting.justifiedIds.map(id => byId[id]?.name).filter(Boolean).join(", ");
   const title = meeting.department === "Executive Board" ? "Executive Board Meeting Minutes" : `${meeting.department} Meeting Minutes`;
-
-  const rows = [
-    ["Meeting Purpose", meeting.purpose],
-    ["Date", fmtDateDMY(meeting.date)],
-    ["Time", [meeting.startTime, meeting.endTime].filter(Boolean).join(" to ")],
-    ["Location", meeting.location],
-    ["Meeting Facilitator", meeting.facilitator],
-    ["Attendees", presentNames],
-    ["Absent", absentNames],
-    ["Justified Absence", justifiedNames],
-  ];
-
-  return (
-    <div className="print-sheet bg-white shadow-lg" style={{ width: "210mm", minHeight: "297mm", padding: "16mm 14mm" }}>
-      <PrintHeader logoSrc={logoSrc} title={title} />
-
-      <table className="w-full border-collapse text-[13px] mb-6">
-        <tbody>
-          {rows.map(([label, val]) => (
-            <tr key={label}>
-              <td className="border border-stone-800 px-2 py-1.5 font-semibold w-1/3 align-top">{label}</td>
-              <td className="border border-stone-800 px-2 py-1.5 align-top">{val || ""}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <table className="w-full border-collapse text-[13px] mb-6">
-        <thead>
-          <tr>
-            <th className="border border-stone-800 px-2 py-1.5 text-left">Task</th>
-            <th className="border border-stone-800 px-2 py-1.5 text-left w-1/4">Assigned To</th>
-            <th className="border border-stone-800 px-2 py-1.5 text-left w-1/5">Deadline</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(meeting.tasks.length ? meeting.tasks : [{ id: "x", task: "", assignedTo: "", deadline: "" }]).map((t) => (
-            <tr key={t.id}>
-              <td className="border border-stone-800 px-2 py-1.5">{t.task}</td>
-              <td className="border border-stone-800 px-2 py-1.5">{t.assignedTo}</td>
-              <td className="border border-stone-800 px-2 py-1.5">{t.deadline ? fmtDateDMY(t.deadline) : ""}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <BoxSection title="Agenda Items">
-        <ol className="list-decimal ml-5 space-y-0.5">
-          {meeting.agenda.filter(Boolean).map((a, i) => <li key={i}>{a}</li>)}
-        </ol>
-      </BoxSection>
-
-      <BoxSection title="Announcements">{meeting.announcements}</BoxSection>
-      <BoxSection title="Discussion (items / knowledge shared)" minH="40mm">{meeting.discussion}</BoxSection>
-      <BoxSection title="Decisions Made (what, why, impacts if possible)">{meeting.decisions}</BoxSection>
-    </div>
-  );
+  const rows = [["Meeting Purpose", meeting.purpose], ["Date", fmtDateDMY(meeting.date)], ["Time", [meeting.startTime, meeting.endTime].filter(Boolean).join(" to ")], ["Location", meeting.location], ["Meeting Facilitator", meeting.facilitator], ["Attendees", presentNames], ["Absent", absentNames], ["Justified Absence", justifiedNames]];
+  return /*#__PURE__*/React.createElement("div", {
+    className: "print-sheet bg-white shadow-lg",
+    style: {
+      width: "210mm",
+      minHeight: "297mm",
+      padding: "16mm 14mm"
+    }
+  }, /*#__PURE__*/React.createElement(PrintHeader, {
+    logoSrc: logoSrc,
+    title: title
+  }), /*#__PURE__*/React.createElement("table", {
+    className: "w-full border-collapse text-[13px] mb-6"
+  }, /*#__PURE__*/React.createElement("tbody", null, rows.map(([label, val]) => /*#__PURE__*/React.createElement("tr", {
+    key: label
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "border border-stone-800 px-2 py-1.5 font-semibold w-1/3 align-top"
+  }, label), /*#__PURE__*/React.createElement("td", {
+    className: "border border-stone-800 px-2 py-1.5 align-top"
+  }, val || ""))))), /*#__PURE__*/React.createElement("table", {
+    className: "w-full border-collapse text-[13px] mb-6"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+    className: "border border-stone-800 px-2 py-1.5 text-left"
+  }, "Task"), /*#__PURE__*/React.createElement("th", {
+    className: "border border-stone-800 px-2 py-1.5 text-left w-1/4"
+  }, "Assigned To"), /*#__PURE__*/React.createElement("th", {
+    className: "border border-stone-800 px-2 py-1.5 text-left w-1/5"
+  }, "Deadline"))), /*#__PURE__*/React.createElement("tbody", null, (meeting.tasks.length ? meeting.tasks : [{
+    id: "x",
+    task: "",
+    assignedTo: "",
+    deadline: ""
+  }]).map(t => /*#__PURE__*/React.createElement("tr", {
+    key: t.id
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "border border-stone-800 px-2 py-1.5"
+  }, t.task), /*#__PURE__*/React.createElement("td", {
+    className: "border border-stone-800 px-2 py-1.5"
+  }, t.assignedTo), /*#__PURE__*/React.createElement("td", {
+    className: "border border-stone-800 px-2 py-1.5"
+  }, t.deadline ? fmtDateDMY(t.deadline) : ""))))), /*#__PURE__*/React.createElement(BoxSection, {
+    title: "Agenda Items"
+  }, /*#__PURE__*/React.createElement("ol", {
+    className: "list-decimal ml-5 space-y-0.5"
+  }, meeting.agenda.filter(Boolean).map((a, i) => /*#__PURE__*/React.createElement("li", {
+    key: i
+  }, a)))), /*#__PURE__*/React.createElement(BoxSection, {
+    title: "Announcements"
+  }, meeting.announcements), /*#__PURE__*/React.createElement(BoxSection, {
+    title: "Discussion (items / knowledge shared)",
+    minH: "40mm"
+  }, meeting.discussion), /*#__PURE__*/React.createElement(BoxSection, {
+    title: "Decisions Made (what, why, impacts if possible)"
+  }, meeting.decisions));
 }
-
-function PrintHeader({ logoSrc, title }) {
-  return (
-    <div className="flex items-center gap-4 mb-6 border-b-2 border-emerald-900 pb-3">
-      <img src={logoSrc} alt="Club seal" className="w-16 h-16 object-contain" />
-      <h1 className="font-serif text-2xl italic underline text-emerald-950">{title}</h1>
-    </div>
-  );
+function PrintHeader({
+  logoSrc,
+  title
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4 mb-6 border-b-2 border-emerald-900 pb-3"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: logoSrc,
+    alt: "Club seal",
+    className: "w-16 h-16 object-contain"
+  }), /*#__PURE__*/React.createElement("h1", {
+    className: "font-serif text-2xl italic underline text-emerald-950"
+  }, title));
 }
-function BoxSection({ title, children, minH = "18mm" }) {
-  return (
-    <table className="w-full border-collapse text-[13px] mb-6">
-      <thead>
-        <tr><th className="border border-stone-800 px-2 py-1.5 text-left font-semibold">{title}</th></tr>
-      </thead>
-      <tbody>
-        <tr><td className="border border-stone-800 px-2 py-2 align-top whitespace-pre-wrap" style={{ minHeight: minH }}>{children}</td></tr>
-      </tbody>
-    </table>
-  );
+function BoxSection({
+  title,
+  children,
+  minH = "18mm"
+}) {
+  return /*#__PURE__*/React.createElement("table", {
+    className: "w-full border-collapse text-[13px] mb-6"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("th", {
+    className: "border border-stone-800 px-2 py-1.5 text-left font-semibold"
+  }, title))), /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", {
+    className: "border border-stone-800 px-2 py-2 align-top whitespace-pre-wrap",
+    style: {
+      minHeight: minH
+    }
+  }, children))));
 }
-
 function buildPrintableHTML(meeting, members, logoSrc, settings) {
-  const byId = Object.fromEntries(members.map((m) => [m.id, m]));
-  const presentNames = meeting.presentIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
-  const absentOnly = meeting.absentIds.filter((id) => !meeting.justifiedIds.includes(id));
-  const absentNames = absentOnly.map((id) => byId[id]?.name).filter(Boolean).join(", ");
-  const justifiedNames = meeting.justifiedIds.map((id) => byId[id]?.name).filter(Boolean).join(", ");
+  const byId = Object.fromEntries(members.map(m => [m.id, m]));
+  const presentNames = meeting.presentIds.map(id => byId[id]?.name).filter(Boolean).join(", ");
+  const absentOnly = meeting.absentIds.filter(id => !meeting.justifiedIds.includes(id));
+  const absentNames = absentOnly.map(id => byId[id]?.name).filter(Boolean).join(", ");
+  const justifiedNames = meeting.justifiedIds.map(id => byId[id]?.name).filter(Boolean).join(", ");
   const title = meeting.department === "Executive Board" ? "Executive Board Meeting Minutes" : `${meeting.department} Meeting Minutes`;
-  const rows = [
-    ["Meeting Purpose", meeting.purpose], ["Date", fmtDateDMY(meeting.date)],
-    ["Time", [meeting.startTime, meeting.endTime].filter(Boolean).join(" to ")],
-    ["Location", meeting.location], ["Meeting Facilitator", meeting.facilitator],
-    ["Attendees", presentNames], ["Absent", absentNames], ["Justified Absence", justifiedNames],
-  ];
-  const taskRows = (meeting.tasks.length ? meeting.tasks : [{ task: "", assignedTo: "", deadline: "" }])
-    .map((t) => `<tr><td>${nl2br(t.task)}</td><td>${nl2br(t.assignedTo)}</td><td>${t.deadline ? fmtDateDMY(t.deadline) : ""}</td></tr>`).join("");
-  const agendaLi = meeting.agenda.filter(Boolean).map((a) => `<li>${esc(a)}</li>`).join("") || "<li></li>";
+  const rows = [["Meeting Purpose", meeting.purpose], ["Date", fmtDateDMY(meeting.date)], ["Time", [meeting.startTime, meeting.endTime].filter(Boolean).join(" to ")], ["Location", meeting.location], ["Meeting Facilitator", meeting.facilitator], ["Attendees", presentNames], ["Absent", absentNames], ["Justified Absence", justifiedNames]];
+  const taskRows = (meeting.tasks.length ? meeting.tasks : [{
+    task: "",
+    assignedTo: "",
+    deadline: ""
+  }]).map(t => `<tr><td>${nl2br(t.task)}</td><td>${nl2br(t.assignedTo)}</td><td>${t.deadline ? fmtDateDMY(t.deadline) : ""}</td></tr>`).join("");
+  const agendaLi = meeting.agenda.filter(Boolean).map(a => `<li>${esc(a)}</li>`).join("") || "<li></li>";
   return `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
   <head><meta charset="utf-8"><title>${esc(title)}</title>
   <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->
@@ -822,13 +1075,25 @@ function buildPrintableHTML(meeting, members, logoSrc, settings) {
   <table border="1" cellpadding="6" cellspacing="0"><thead><tr><th>Decisions Made (what, why, impacts if possible)</th></tr></thead><tbody><tr><td style="min-height:40px">${nl2br(meeting.decisions)}</td></tr></tbody></table>
   </body></html>`;
 }
-function esc(s) { return (s || "").toString().replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
-function nl2br(s) { return esc(s).replace(/\n/g, "<br/>"); }
+function esc(s) {
+  return (s || "").toString().replace(/[&<>]/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;"
+  })[c]);
+}
+function nl2br(s) {
+  return esc(s).replace(/\n/g, "<br/>");
+}
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /* =========================================================================
@@ -839,14 +1104,20 @@ function triggerDownload(blob, filename) {
    MEMBERS GATE (Board PIN required — keeps the roster board-only)
 ========================================================================= */
 
-function MembersGate({ settings, members, setMembers }) {
+function MembersGate({
+  settings,
+  members,
+  setMembers
+}) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [unlocked, setUnlocked] = useState(false);
-
   function unlock() {
     const code = pin.trim();
-    if (!code) { setError("Enter the Board PIN."); return; }
+    if (!code) {
+      setError("Enter the Board PIN.");
+      return;
+    }
     if (settings.boardPin && code === settings.boardPin) {
       setUnlocked(true);
       setError("");
@@ -854,54 +1125,74 @@ function MembersGate({ settings, members, setMembers }) {
     }
     setError("Incorrect PIN. The Members page is board-only.");
   }
-
   if (!unlocked) {
-    return (
-      <div className="p-8 max-w-sm mx-auto">
-        <h1 className="font-serif text-3xl text-emerald-950 mb-1">Members</h1>
-        <p className="text-stone-500 text-sm mb-6">This page is restricted to Executive Board members. Enter the Board PIN to continue.</p>
-        <div className="bg-white rounded-xl border border-stone-200 p-5">
-          <Field label="Board PIN">
-            <input
-              className="input text-center tracking-[0.3em] text-lg"
-              value={pin}
-              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }}
-              onKeyDown={(e) => e.key === "Enter" && unlock()}
-              placeholder="••••"
-              type="password"
-              inputMode="numeric"
-            />
-          </Field>
-          {error && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
-          <button onClick={unlock} className="mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg">
-            <Lock className="w-4 h-4" /> Unlock
-          </button>
-        </div>
-      </div>
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      className: "p-8 max-w-sm mx-auto"
+    }, /*#__PURE__*/React.createElement("h1", {
+      className: "font-serif text-3xl text-emerald-950 mb-1"
+    }, "Members"), /*#__PURE__*/React.createElement("p", {
+      className: "text-stone-500 text-sm mb-6"
+    }, "This page is restricted to Executive Board members. Enter the Board PIN to continue."), /*#__PURE__*/React.createElement("div", {
+      className: "bg-white rounded-xl border border-stone-200 p-5"
+    }, /*#__PURE__*/React.createElement(Field, {
+      label: "Board PIN"
+    }, /*#__PURE__*/React.createElement("input", {
+      className: "input text-center tracking-[0.3em] text-lg",
+      value: pin,
+      onChange: e => {
+        setPin(e.target.value.replace(/\D/g, "").slice(0, 6));
+        setError("");
+      },
+      onKeyDown: e => e.key === "Enter" && unlock(),
+      placeholder: "••••",
+      type: "password",
+      inputMode: "numeric"
+    })), error && /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-red-600 mt-2 flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(AlertCircle, {
+      className: "w-3.5 h-3.5"
+    }), " ", error), /*#__PURE__*/React.createElement("button", {
+      onClick: unlock,
+      className: "mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg"
+    }, /*#__PURE__*/React.createElement(Lock, {
+      className: "w-4 h-4"
+    }), " Unlock")));
   }
-
-  return (
-    <div>
-      <div className="no-print flex justify-end px-8 pt-6">
-        <button onClick={() => { setUnlocked(false); setPin(""); }} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
-      </div>
-      <MembersPage members={members} setMembers={setMembers} />
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "no-print flex justify-end px-8 pt-6"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setUnlocked(false);
+      setPin("");
+    },
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+  }, /*#__PURE__*/React.createElement(LogOut, {
+    className: "w-3.5 h-3.5"
+  }), " Lock")), /*#__PURE__*/React.createElement(MembersPage, {
+    members: members,
+    setMembers: setMembers
+  }));
 }
 
 /* =========================================================================
    MEMBERS PAGE
 ========================================================================= */
 
-function MembersPage({ members, setMembers }) {
-  const [draft, setDraft] = useState({ name: "", email: "", department: "Marketing", allocation: "", position: "Member", pin: "" });
+function MembersPage({
+  members,
+  setMembers
+}) {
+  const [draft, setDraft] = useState({
+    name: "",
+    email: "",
+    department: "Marketing",
+    allocation: "",
+    position: "Member",
+    pin: ""
+  });
   const [q, setQ] = useState("");
-
   const isEB = EXEC_POSITIONS.includes(draft.position);
   const isPM = draft.department === "Project Management";
-
   function addMember() {
     if (!draft.name.trim()) return;
     const record = {
@@ -911,77 +1202,125 @@ function MembersPage({ members, setMembers }) {
       position: draft.position,
       department: isEB ? "" : draft.department,
       allocation: isEB || isPM ? "" : draft.allocation,
-      pin: isEB ? "" : draft.pin.trim(),
+      pin: isEB ? "" : draft.pin.trim()
     };
-    setMembers((p) => [...p, record]);
-    setDraft({ name: "", email: "", department: "Marketing", allocation: "", position: "Member", pin: "" });
+    setMembers(p => [...p, record]);
+    setDraft({
+      name: "",
+      email: "",
+      department: "Marketing",
+      allocation: "",
+      position: "Member",
+      pin: ""
+    });
   }
-  function removeMember(id) { setMembers((p) => p.filter((m) => m.id !== id)); }
-
-  const filtered = members.filter((m) => (m.name + m.email + (m.department || "")).toLowerCase().includes(q.toLowerCase()));
-
-  return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="font-serif text-3xl text-emerald-950 mb-1">Members</h1>
-      <p className="text-stone-500 text-sm mb-6">Your club roster — used for one-click attendance selection.</p>
-
-      <div className="bg-white rounded-xl border border-stone-200 p-5 mb-6">
-        <h3 className="font-serif text-base text-emerald-950 mb-3">Add a member</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <input className="input" placeholder="Full name" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          <input className="input" placeholder="Email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
-          <select className="input col-span-2" value={draft.position} onChange={(e) => setDraft({ ...draft, position: e.target.value })}>
-            <optgroup label="Executive Board">
-              {EXEC_POSITIONS.map((p) => <option key={p}>{p}</option>)}
-            </optgroup>
-            <optgroup label="Department Member">
-              <option>Member</option>
-            </optgroup>
-          </select>
-
-          {!isEB && (
-            <select className="input" value={draft.department} onChange={(e) => setDraft({ ...draft, department: e.target.value })}>
-              {DEPARTMENTS.filter((d) => d !== "Executive Board").map((d) => <option key={d}>{d}</option>)}
-            </select>
-          )}
-          {!isEB && !isPM && (
-            <input className="input" placeholder="Allocation department (optional)" value={draft.allocation} onChange={(e) => setDraft({ ...draft, allocation: e.target.value })} />
-          )}
-          {!isEB && (
-            <input
-              className="input"
-              placeholder="4-digit PIN (for department folder access)"
-              value={draft.pin}
-              onChange={(e) => setDraft({ ...draft, pin: e.target.value.replace(/\D/g, "").slice(0, 4) })}
-              maxLength={4}
-              inputMode="numeric"
-            />
-          )}
-        </div>
-        {isEB && <p className="text-xs text-stone-400 mt-2">Executive Board members belong to the board itself, so no department, allocation department, or personal PIN is needed — they use the shared Board PIN set in Settings.</p>}
-        {!isEB && isPM && <p className="text-xs text-stone-400 mt-2">Project Management members only have their PM department — no allocation department.</p>}
-        <button onClick={addMember} className="mt-3 flex items-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2 rounded-lg"><Plus className="w-4 h-4" /> Add Member</button>
-      </div>
-
-      <div className="flex items-center gap-2 mb-3">
-        <Search className="w-4 h-4 text-stone-400" />
-        <input className="input" placeholder="Search members..." value={q} onChange={(e) => setQ(e.target.value)} />
-      </div>
-
-      <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
-        {filtered.length === 0 && <EmptyHint text="No members yet." />}
-        {filtered.map((m) => (
-          <div key={m.id} className="flex items-center justify-between px-4 py-3">
-            <div>
-              <div className="text-sm font-medium">{m.name}</div>
-              <div className="text-xs text-stone-500">{m.position}{m.department ? ` · ${m.department}` : ""}{m.allocation ? ` (${m.allocation})` : ""} &middot; {m.email}{m.pin ? ` · PIN ${m.pin}` : ""}</div>
-            </div>
-            <button onClick={() => removeMember(m.id)} className="text-stone-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  function removeMember(id) {
+    setMembers(p => p.filter(m => m.id !== id));
+  }
+  const filtered = members.filter(m => (m.name + m.email + (m.department || "")).toLowerCase().includes(q.toLowerCase()));
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-8 max-w-4xl mx-auto"
+  }, /*#__PURE__*/React.createElement("h1", {
+    className: "font-serif text-3xl text-emerald-950 mb-1"
+  }, "Members"), /*#__PURE__*/React.createElement("p", {
+    className: "text-stone-500 text-sm mb-6"
+  }, "Your club roster — used for one-click attendance selection."), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5 mb-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-serif text-base text-emerald-950 mb-3"
+  }, "Add a member"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    placeholder: "Full name",
+    value: draft.name,
+    onChange: e => setDraft({
+      ...draft,
+      name: e.target.value
+    })
+  }), /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    placeholder: "Email",
+    value: draft.email,
+    onChange: e => setDraft({
+      ...draft,
+      email: e.target.value
+    })
+  }), /*#__PURE__*/React.createElement("select", {
+    className: "input col-span-2",
+    value: draft.position,
+    onChange: e => setDraft({
+      ...draft,
+      position: e.target.value
+    })
+  }, /*#__PURE__*/React.createElement("optgroup", {
+    label: "Executive Board"
+  }, EXEC_POSITIONS.map(p => /*#__PURE__*/React.createElement("option", {
+    key: p
+  }, p))), /*#__PURE__*/React.createElement("optgroup", {
+    label: "Department Member"
+  }, /*#__PURE__*/React.createElement("option", null, "Member"))), !isEB && /*#__PURE__*/React.createElement("select", {
+    className: "input",
+    value: draft.department,
+    onChange: e => setDraft({
+      ...draft,
+      department: e.target.value
+    })
+  }, DEPARTMENTS.filter(d => d !== "Executive Board").map(d => /*#__PURE__*/React.createElement("option", {
+    key: d
+  }, d))), !isEB && !isPM && /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    placeholder: "Allocation department (optional)",
+    value: draft.allocation,
+    onChange: e => setDraft({
+      ...draft,
+      allocation: e.target.value
+    })
+  }), !isEB && /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    placeholder: "4-digit PIN (for department folder access)",
+    value: draft.pin,
+    onChange: e => setDraft({
+      ...draft,
+      pin: e.target.value.replace(/\D/g, "").slice(0, 4)
+    }),
+    maxLength: 4,
+    inputMode: "numeric"
+  })), isEB && /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-stone-400 mt-2"
+  }, "Executive Board members belong to the board itself, so no department, allocation department, or personal PIN is needed — they use the shared Board PIN set in Settings."), !isEB && isPM && /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-stone-400 mt-2"
+  }, "Project Management members only have their PM department — no allocation department."), /*#__PURE__*/React.createElement("button", {
+    onClick: addMember,
+    className: "mt-3 flex items-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2 rounded-lg"
+  }, /*#__PURE__*/React.createElement(Plus, {
+    className: "w-4 h-4"
+  }), " Add Member")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-2 mb-3"
+  }, /*#__PURE__*/React.createElement(Search, {
+    className: "w-4 h-4 text-stone-400"
+  }), /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    placeholder: "Search members...",
+    value: q,
+    onChange: e => setQ(e.target.value)
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 divide-y divide-stone-100"
+  }, filtered.length === 0 && /*#__PURE__*/React.createElement(EmptyHint, {
+    text: "No members yet."
+  }), filtered.map(m => /*#__PURE__*/React.createElement("div", {
+    key: m.id,
+    className: "flex items-center justify-between px-4 py-3"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "text-sm font-medium"
+  }, m.name), /*#__PURE__*/React.createElement("div", {
+    className: "text-xs text-stone-500"
+  }, m.position, m.department ? ` · ${m.department}` : "", m.allocation ? ` (${m.allocation})` : "", " · ", m.email, m.pin ? ` · PIN ${m.pin}` : "")), /*#__PURE__*/React.createElement("button", {
+    onClick: () => removeMember(m.id),
+    className: "text-stone-400 hover:text-red-600"
+  }, /*#__PURE__*/React.createElement(Trash2, {
+    className: "w-4 h-4"
+  }))))));
 }
 
 /* =========================================================================
@@ -994,30 +1333,42 @@ function MembersPage({ members, setMembers }) {
    state lives only in this component's local state.
 ========================================================================= */
 
-function FoldersPage({ meetings, members, settings, logoSrc }) {
+function FoldersPage({
+  meetings,
+  members,
+  settings,
+  logoSrc
+}) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [access, setAccess] = useState(null); // { role: "board" } | { role: "member", department, memberName }
   const [openFolder, setOpenFolder] = useState(null);
   const [viewingMeeting, setViewingMeeting] = useState(null);
-
   function unlock() {
     const code = pin.trim();
-    if (!code) { setError("Enter a PIN."); return; }
+    if (!code) {
+      setError("Enter a PIN.");
+      return;
+    }
     if (settings.boardPin && code === settings.boardPin) {
-      setAccess({ role: "board" });
+      setAccess({
+        role: "board"
+      });
       setError("");
       return;
     }
-    const match = members.find((m) => m.pin && m.pin === code);
+    const match = members.find(m => m.pin && m.pin === code);
     if (match) {
-      setAccess({ role: "member", department: match.department, memberName: match.name });
+      setAccess({
+        role: "member",
+        department: match.department,
+        memberName: match.name
+      });
       setError("");
       return;
     }
     setError("Incorrect PIN. Check with your department VP or the board.");
   }
-
   function lock() {
     setAccess(null);
     setPin("");
@@ -1025,107 +1376,131 @@ function FoldersPage({ meetings, members, settings, logoSrc }) {
     setOpenFolder(null);
     setViewingMeeting(null);
   }
-
   if (!access) {
-    return (
-      <div className="p-8 max-w-sm mx-auto">
-        <h1 className="font-serif text-3xl text-emerald-950 mb-1">Folders</h1>
-        <p className="text-stone-500 text-sm mb-6">Enter your personal PIN, or the Board PIN, to view meeting minutes.</p>
-        <div className="bg-white rounded-xl border border-stone-200 p-5">
-          <Field label="PIN">
-            <input
-              className="input text-center tracking-[0.3em] text-lg"
-              value={pin}
-              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }}
-              onKeyDown={(e) => e.key === "Enter" && unlock()}
-              placeholder="••••"
-              type="password"
-              inputMode="numeric"
-            />
-          </Field>
-          {error && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
-          <button onClick={unlock} className="mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg">
-            <Lock className="w-4 h-4" /> Unlock
-          </button>
-        </div>
-      </div>
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      className: "p-8 max-w-sm mx-auto"
+    }, /*#__PURE__*/React.createElement("h1", {
+      className: "font-serif text-3xl text-emerald-950 mb-1"
+    }, "Folders"), /*#__PURE__*/React.createElement("p", {
+      className: "text-stone-500 text-sm mb-6"
+    }, "Enter your personal PIN, or the Board PIN, to view meeting minutes."), /*#__PURE__*/React.createElement("div", {
+      className: "bg-white rounded-xl border border-stone-200 p-5"
+    }, /*#__PURE__*/React.createElement(Field, {
+      label: "PIN"
+    }, /*#__PURE__*/React.createElement("input", {
+      className: "input text-center tracking-[0.3em] text-lg",
+      value: pin,
+      onChange: e => {
+        setPin(e.target.value.replace(/\D/g, "").slice(0, 6));
+        setError("");
+      },
+      onKeyDown: e => e.key === "Enter" && unlock(),
+      placeholder: "••••",
+      type: "password",
+      inputMode: "numeric"
+    })), error && /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-red-600 mt-2 flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(AlertCircle, {
+      className: "w-3.5 h-3.5"
+    }), " ", error), /*#__PURE__*/React.createElement("button", {
+      onClick: unlock,
+      className: "mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg"
+    }, /*#__PURE__*/React.createElement(Lock, {
+      className: "w-4 h-4"
+    }), " Unlock")));
   }
-
-  const accessibleDepartments =
-    access.role === "board"
-      ? DEPARTMENTS
-      : [access.department, "Club"].filter((d, i, arr) => d && arr.indexOf(d) === i);
-
+  const accessibleDepartments = access.role === "board" ? DEPARTMENTS : [access.department, "Club"].filter((d, i, arr) => d && arr.indexOf(d) === i);
   if (viewingMeeting) {
-    return (
-      <div className="min-h-screen">
-        <div className="no-print sticky top-0 z-10 bg-stone-50/95 backdrop-blur border-b border-stone-200 px-8 py-4 flex items-center justify-between">
-          <button onClick={() => setViewingMeeting(null)} className="flex items-center gap-1.5 text-sm text-stone-600 hover:text-stone-900">
-            <ChevronRight className="w-4 h-4 rotate-180" /> Back to folder
-          </button>
-          <button onClick={lock} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
-        </div>
-        <div className="preview-wrap">
-          <PrintableSheet meeting={viewingMeeting} members={members} logoSrc={logoSrc} settings={settings} />
-        </div>
-      </div>
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      className: "min-h-screen"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "no-print sticky top-0 z-10 bg-stone-50/95 backdrop-blur border-b border-stone-200 px-8 py-4 flex items-center justify-between"
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setViewingMeeting(null),
+      className: "flex items-center gap-1.5 text-sm text-stone-600 hover:text-stone-900"
+    }, /*#__PURE__*/React.createElement(ChevronRight, {
+      className: "w-4 h-4 rotate-180"
+    }), " Back to folder"), /*#__PURE__*/React.createElement("button", {
+      onClick: lock,
+      className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+    }, /*#__PURE__*/React.createElement(LogOut, {
+      className: "w-3.5 h-3.5"
+    }), " Lock")), /*#__PURE__*/React.createElement("div", {
+      className: "preview-wrap"
+    }, /*#__PURE__*/React.createElement(PrintableSheet, {
+      meeting: viewingMeeting,
+      members: members,
+      logoSrc: logoSrc,
+      settings: settings
+    })));
   }
-
   if (openFolder) {
-    const folderMeetings = meetings
-      .filter((m) => m.department === openFolder)
-      .sort((a, b) => b.updatedAt - a.updatedAt);
-    return (
-      <div className="p-8 max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <button onClick={() => setOpenFolder(null)} className="text-xs text-stone-500 hover:text-stone-800 flex items-center gap-1 mb-2"><ChevronRight className="w-3.5 h-3.5 rotate-180" /> All folders</button>
-            <h1 className="font-serif text-2xl text-emerald-950">{openFolder} Minutes</h1>
-          </div>
-          <button onClick={lock} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
-        </div>
-        <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
-          {folderMeetings.length === 0 && <EmptyHint text="No meeting minutes in this folder yet." />}
-          {folderMeetings.map((m) => (
-            <button key={m.id} onClick={() => setViewingMeeting(m)} className="w-full text-left flex items-center justify-between px-4 py-3 hover:bg-stone-50">
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{m.purpose || "Untitled meeting"}</div>
-                <div className="text-xs text-stone-500">{fmtDateDMY(m.date)}</div>
-              </div>
-              <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ml-2 ${m.status === "final" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
-                {m.status}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+    const folderMeetings = meetings.filter(m => m.department === openFolder).sort((a, b) => b.updatedAt - a.updatedAt);
+    return /*#__PURE__*/React.createElement("div", {
+      className: "p-8 max-w-2xl mx-auto"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-6"
+    }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+      onClick: () => setOpenFolder(null),
+      className: "text-xs text-stone-500 hover:text-stone-800 flex items-center gap-1 mb-2"
+    }, /*#__PURE__*/React.createElement(ChevronRight, {
+      className: "w-3.5 h-3.5 rotate-180"
+    }), " All folders"), /*#__PURE__*/React.createElement("h1", {
+      className: "font-serif text-2xl text-emerald-950"
+    }, openFolder, " Minutes")), /*#__PURE__*/React.createElement("button", {
+      onClick: lock,
+      className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+    }, /*#__PURE__*/React.createElement(LogOut, {
+      className: "w-3.5 h-3.5"
+    }), " Lock")), /*#__PURE__*/React.createElement("div", {
+      className: "bg-white rounded-xl border border-stone-200 divide-y divide-stone-100"
+    }, folderMeetings.length === 0 && /*#__PURE__*/React.createElement(EmptyHint, {
+      text: "No meeting minutes in this folder yet."
+    }), folderMeetings.map(m => /*#__PURE__*/React.createElement("button", {
+      key: m.id,
+      onClick: () => setViewingMeeting(m),
+      className: "w-full text-left flex items-center justify-between px-4 py-3 hover:bg-stone-50"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "min-w-0"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "text-sm font-medium truncate"
+    }, m.purpose || "Untitled meeting"), /*#__PURE__*/React.createElement("div", {
+      className: "text-xs text-stone-500"
+    }, fmtDateDMY(m.date))), /*#__PURE__*/React.createElement("span", {
+      className: `text-[10px] uppercase tracking-wide px-2 py-1 rounded-full shrink-0 ml-2 ${m.status === "final" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`
+    }, m.status)))));
   }
-
-  return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="font-serif text-3xl text-emerald-950">Folders</h1>
-        <button onClick={lock} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
-      </div>
-      <p className="text-stone-500 text-sm mb-6">
-        {access.role === "board" ? "Board access — every folder is open to you." : `Signed in as ${access.memberName}.`}
-      </p>
-      <div className="grid grid-cols-2 gap-3">
-        {accessibleDepartments.map((d) => {
-          const count = meetings.filter((m) => m.department === d).length;
-          return (
-            <button key={d} onClick={() => setOpenFolder(d)} className="text-left bg-white rounded-xl border border-stone-200 p-4 hover:border-emerald-300">
-              <div className="flex items-center gap-2 text-emerald-900 mb-1"><Folder className="w-4 h-4" /> <span className="font-serif text-base">{d}</span></div>
-              <div className="text-xs text-stone-500">{count} meeting{count === 1 ? "" : "s"}</div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-8 max-w-2xl mx-auto"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center justify-between mb-1"
+  }, /*#__PURE__*/React.createElement("h1", {
+    className: "font-serif text-3xl text-emerald-950"
+  }, "Folders"), /*#__PURE__*/React.createElement("button", {
+    onClick: lock,
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+  }, /*#__PURE__*/React.createElement(LogOut, {
+    className: "w-3.5 h-3.5"
+  }), " Lock")), /*#__PURE__*/React.createElement("p", {
+    className: "text-stone-500 text-sm mb-6"
+  }, access.role === "board" ? "Board access — every folder is open to you." : `Signed in as ${access.memberName}.`), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, accessibleDepartments.map(d => {
+    const count = meetings.filter(m => m.department === d).length;
+    return /*#__PURE__*/React.createElement("button", {
+      key: d,
+      onClick: () => setOpenFolder(d),
+      className: "text-left bg-white rounded-xl border border-stone-200 p-4 hover:border-emerald-300"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 text-emerald-900 mb-1"
+    }, /*#__PURE__*/React.createElement(Folder, {
+      className: "w-4 h-4"
+    }), " ", /*#__PURE__*/React.createElement("span", {
+      className: "font-serif text-base"
+    }, d)), /*#__PURE__*/React.createElement("div", {
+      className: "text-xs text-stone-500"
+    }, count, " meeting", count === 1 ? "" : "s"));
+  })));
 }
 
 /* =========================================================================
@@ -1137,7 +1512,11 @@ function FoldersPage({ meetings, members, settings, logoSrc }) {
    so this page must be at least as locked down as Members/Folders)
 ========================================================================= */
 
-function SettingsGate({ settings, setSettings, defaultLogo }) {
+function SettingsGate({
+  settings,
+  setSettings,
+  defaultLogo
+}) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [unlocked, setUnlocked] = useState(false);
@@ -1145,10 +1524,12 @@ function SettingsGate({ settings, setSettings, defaultLogo }) {
   // First-time setup: if no Board PIN has ever been set, let the club get
   // in once to create one. After that, this page always requires it.
   const bootstrapping = !settings.boardPin;
-
   function unlock() {
     const code = pin.trim();
-    if (!code) { setError("Enter the Board PIN."); return; }
+    if (!code) {
+      setError("Enter the Board PIN.");
+      return;
+    }
     if (settings.boardPin && code === settings.boardPin) {
       setUnlocked(true);
       setError("");
@@ -1156,111 +1537,158 @@ function SettingsGate({ settings, setSettings, defaultLogo }) {
     }
     setError("Incorrect PIN. Settings is board-only.");
   }
-
   if (!bootstrapping && !unlocked) {
-    return (
-      <div className="p-8 max-w-sm mx-auto">
-        <h1 className="font-serif text-3xl text-emerald-950 mb-1">Settings</h1>
-        <p className="text-stone-500 text-sm mb-6">This page is restricted to Executive Board members. Enter the Board PIN to continue.</p>
-        <div className="bg-white rounded-xl border border-stone-200 p-5">
-          <Field label="Board PIN">
-            <input
-              className="input text-center tracking-[0.3em] text-lg"
-              value={pin}
-              onChange={(e) => { setPin(e.target.value.replace(/\D/g, "").slice(0, 6)); setError(""); }}
-              onKeyDown={(e) => e.key === "Enter" && unlock()}
-              placeholder="••••"
-              type="password"
-              inputMode="numeric"
-            />
-          </Field>
-          {error && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
-          <button onClick={unlock} className="mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg">
-            <Lock className="w-4 h-4" /> Unlock
-          </button>
-        </div>
-      </div>
-    );
+    return /*#__PURE__*/React.createElement("div", {
+      className: "p-8 max-w-sm mx-auto"
+    }, /*#__PURE__*/React.createElement("h1", {
+      className: "font-serif text-3xl text-emerald-950 mb-1"
+    }, "Settings"), /*#__PURE__*/React.createElement("p", {
+      className: "text-stone-500 text-sm mb-6"
+    }, "This page is restricted to Executive Board members. Enter the Board PIN to continue."), /*#__PURE__*/React.createElement("div", {
+      className: "bg-white rounded-xl border border-stone-200 p-5"
+    }, /*#__PURE__*/React.createElement(Field, {
+      label: "Board PIN"
+    }, /*#__PURE__*/React.createElement("input", {
+      className: "input text-center tracking-[0.3em] text-lg",
+      value: pin,
+      onChange: e => {
+        setPin(e.target.value.replace(/\D/g, "").slice(0, 6));
+        setError("");
+      },
+      onKeyDown: e => e.key === "Enter" && unlock(),
+      placeholder: "••••",
+      type: "password",
+      inputMode: "numeric"
+    })), error && /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-red-600 mt-2 flex items-center gap-1"
+    }, /*#__PURE__*/React.createElement(AlertCircle, {
+      className: "w-3.5 h-3.5"
+    }), " ", error), /*#__PURE__*/React.createElement("button", {
+      onClick: unlock,
+      className: "mt-4 w-full flex items-center justify-center gap-1.5 bg-emerald-900 text-white text-sm px-3 py-2.5 rounded-lg"
+    }, /*#__PURE__*/React.createElement(Lock, {
+      className: "w-4 h-4"
+    }), " Unlock")));
   }
-
-  return (
-    <div>
-      {!bootstrapping && (
-        <div className="no-print flex justify-end px-8 pt-6">
-          <button onClick={() => { setUnlocked(false); setPin(""); }} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><LogOut className="w-3.5 h-3.5" /> Lock</button>
-        </div>
-      )}
-      <SettingsPage settings={settings} setSettings={setSettings} defaultLogo={defaultLogo} />
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", null, !bootstrapping && /*#__PURE__*/React.createElement("div", {
+    className: "no-print flex justify-end px-8 pt-6"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => {
+      setUnlocked(false);
+      setPin("");
+    },
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+  }, /*#__PURE__*/React.createElement(LogOut, {
+    className: "w-3.5 h-3.5"
+  }), " Lock")), /*#__PURE__*/React.createElement(SettingsPage, {
+    settings: settings,
+    setSettings: setSettings,
+    defaultLogo: defaultLogo
+  }));
 }
 
 /* =========================================================================
    SETTINGS PAGE
 ========================================================================= */
 
-function SettingsPage({ settings, setSettings, defaultLogo }) {
+function SettingsPage({
+  settings,
+  setSettings,
+  defaultLogo
+}) {
   const fileRef = useRef(null);
   function onLogoUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setSettings((s) => ({ ...s, logo: reader.result }));
+    reader.onload = () => setSettings(s => ({
+      ...s,
+      logo: reader.result
+    }));
     reader.readAsDataURL(file);
   }
-  return (
-    <div className="p-8 max-w-2xl mx-auto">
-      <h1 className="font-serif text-3xl text-emerald-950 mb-1">Settings</h1>
-      <p className="text-stone-500 text-sm mb-6">Branding shown on every generated Meeting Minutes PDF.</p>
-
-      <div className="bg-white rounded-xl border border-stone-200 p-5 mb-5">
-        <h3 className="font-serif text-base text-emerald-950 mb-3">Club Branding</h3>
-        <div className="flex items-center gap-4 mb-4">
-          <img src={settings.logo || defaultLogo} className="w-16 h-16 rounded-full object-contain bg-stone-50 border border-stone-200" />
-          <div>
-            <button onClick={() => fileRef.current.click()} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"><Upload className="w-3.5 h-3.5" /> Upload Club Logo</button>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onLogoUpload} />
-            {settings.logo && <button onClick={() => setSettings((s) => ({ ...s, logo: null }))} className="ml-2 text-xs text-stone-400 hover:text-red-600">Reset to default</button>}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Club Name">
-            <input className="input" value={settings.clubName} onChange={(e) => setSettings((s) => ({ ...s, clubName: e.target.value }))} />
-          </Field>
-          <Field label="Chapter">
-            <input className="input" value={settings.chapter} onChange={(e) => setSettings((s) => ({ ...s, chapter: e.target.value }))} />
-          </Field>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-stone-200 p-5 mb-5">
-        <h3 className="font-serif text-base text-emerald-950 mb-3">Access Control</h3>
-        <Field label="Board PIN (opens every department folder + Executive Board minutes)">
-          <input
-            className="input"
-            value={settings.boardPin || ""}
-            onChange={(e) => setSettings((s) => ({ ...s, boardPin: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
-            placeholder="e.g. 8842"
-            inputMode="numeric"
-            type="password"
-          />
-        </Field>
-        <p className="text-xs text-stone-400 mt-2">Share this PIN only with the 8 board positions — President, Vice President, Treasurer, General Secretary, and the 4 department VPs. Regular department members use their own personal PIN, set for them on the Members page, which only opens their department's folder plus the Club folder.</p>
-      </div>
-
-      <div className="bg-white rounded-xl border border-stone-200 p-5 text-sm text-stone-600 leading-relaxed">
-        <h3 className="font-serif text-base text-emerald-950 mb-2">How this app works</h3>
-        <p className="mb-2">Everything you enter is saved automatically in this browser — no server, no database setup. Click <strong>Save as PDF</strong> to open the finished minutes in a new tab and print them; choose "Save as PDF" as the destination in the print dialog. <strong>HTML</strong> and <strong>Word</strong> exports download instantly.</p>
-        <p>If the PDF tab doesn't open, your browser likely blocked the pop-up — allow pop-ups for this page and click the button again.</p>
-      </div>
-    </div>
-  );
+  return /*#__PURE__*/React.createElement("div", {
+    className: "p-8 max-w-2xl mx-auto"
+  }, /*#__PURE__*/React.createElement("h1", {
+    className: "font-serif text-3xl text-emerald-950 mb-1"
+  }, "Settings"), /*#__PURE__*/React.createElement("p", {
+    className: "text-stone-500 text-sm mb-6"
+  }, "Branding shown on every generated Meeting Minutes PDF."), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5 mb-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-serif text-base text-emerald-950 mb-3"
+  }, "Club Branding"), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4 mb-4"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: settings.logo || defaultLogo,
+    className: "w-16 h-16 rounded-full object-contain bg-stone-50 border border-stone-200"
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => fileRef.current.click(),
+    className: "flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-stone-300 hover:bg-stone-100"
+  }, /*#__PURE__*/React.createElement(Upload, {
+    className: "w-3.5 h-3.5"
+  }), " Upload Club Logo"), /*#__PURE__*/React.createElement("input", {
+    ref: fileRef,
+    type: "file",
+    accept: "image/*",
+    className: "hidden",
+    onChange: onLogoUpload
+  }), settings.logo && /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSettings(s => ({
+      ...s,
+      logo: null
+    })),
+    className: "ml-2 text-xs text-stone-400 hover:text-red-600"
+  }, "Reset to default"))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3"
+  }, /*#__PURE__*/React.createElement(Field, {
+    label: "Club Name"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    value: settings.clubName,
+    onChange: e => setSettings(s => ({
+      ...s,
+      clubName: e.target.value
+    }))
+  })), /*#__PURE__*/React.createElement(Field, {
+    label: "Chapter"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    value: settings.chapter,
+    onChange: e => setSettings(s => ({
+      ...s,
+      chapter: e.target.value
+    }))
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5 mb-5"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-serif text-base text-emerald-950 mb-3"
+  }, "Access Control"), /*#__PURE__*/React.createElement(Field, {
+    label: "Board PIN (opens every department folder + Executive Board minutes)"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "input",
+    value: settings.boardPin || "",
+    onChange: e => setSettings(s => ({
+      ...s,
+      boardPin: e.target.value.replace(/\D/g, "").slice(0, 6)
+    })),
+    placeholder: "e.g. 8842",
+    inputMode: "numeric",
+    type: "password"
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-stone-400 mt-2"
+  }, "Share this PIN only with the 8 board positions — President, Vice President, Treasurer, General Secretary, and the 4 department VPs. Regular department members use their own personal PIN, set for them on the Members page, which only opens their department's folder plus the Club folder.")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-xl border border-stone-200 p-5 text-sm text-stone-600 leading-relaxed"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-serif text-base text-emerald-950 mb-2"
+  }, "How this app works"), /*#__PURE__*/React.createElement("p", {
+    className: "mb-2"
+  }, "Everything you enter is saved automatically in this browser — no server, no database setup. Click ", /*#__PURE__*/React.createElement("strong", null, "Save as PDF"), " to open the finished minutes in a new tab and print them; choose \"Save as PDF\" as the destination in the print dialog. ", /*#__PURE__*/React.createElement("strong", null, "HTML"), " and ", /*#__PURE__*/React.createElement("strong", null, "Word"), " exports download instantly."), /*#__PURE__*/React.createElement("p", null, "If the PDF tab doesn't open, your browser likely blocked the pop-up — allow pop-ups for this page and click the button again.")));
 }
 
 /* ---------------------------- mount ---------------------------- */
 const rootEl = document.getElementById("root");
-ReactDOM.createRoot(rootEl).render(<App />);
-
+ReactDOM.createRoot(rootEl).render(/*#__PURE__*/React.createElement(App, null));
 </script>
 </body>
 </html>
