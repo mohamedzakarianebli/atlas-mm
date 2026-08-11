@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ATLAS Minutes Studio</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.263.1?external=react"
+  }
+}
+</script>
 <style>
   html, body, #root { height: 100%; }
   body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -22,9 +32,9 @@
   });
 </script>
 <script type="module">
-import React, { useState, useEffect, useRef, useCallback } from "https://esm.sh/react@18.3.1";
-import ReactDOM from "https://esm.sh/react-dom@18.3.1/client";
-import { LayoutDashboard, FileText, Users, Settings as SettingsIcon, Plus, Trash2, Search, Copy, Play, Square, Sparkles, Download, FileDown, CheckCircle2, Circle, X, ChevronRight, Upload, Clock, CalendarDays, MapPin, UserCheck, AlertCircle, Wand2, Loader2, Lock, LogOut, Folder } from "https://esm.sh/lucide-react@0.263.1?external=react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import ReactDOM from "react-dom/client";
+import { LayoutDashboard, FileText, Users, Settings as SettingsIcon, Plus, Trash2, Search, Copy, Play, Square, Sparkles, Download, FileDown, CheckCircle2, Circle, X, ChevronRight, Upload, Clock, CalendarDays, MapPin, UserCheck, AlertCircle, Wand2, Loader2, Lock, LogOut, Folder } from "lucide-react";
 
 /* ---------------------------------------------------------------------
    ATLAS Minutes Studio
